@@ -27,7 +27,7 @@ gulp.task('server', function() {
 gulp.task('default', function() {
     gulp.run('server');
 
-    gulp.watch(['./app.js', './lib/**/*.js'], function() {
+    gulp.watch(['**/*.js', '**/*.html'], function() {
         gulp.run('server');
     });
 });
