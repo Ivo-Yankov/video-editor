@@ -12,8 +12,6 @@ var users = require('./routes/users');
 var app = express();
 var http = require('http').Server(app);
 
-var appDir = path.dirname(require.main.filename);
-
 // view engine setup
 app.engine('html', mustacheExpress());
 app.set('view engine', 'mustache');
