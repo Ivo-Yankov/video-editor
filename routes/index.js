@@ -25,7 +25,7 @@ router.get('/', function(req, res) {
 });
 
 router.post('/editor', function(req, res) {
-	var data = editor.run(req.body);
+	var data = editor.render(req.body);
 	res.send(data);
 });
 

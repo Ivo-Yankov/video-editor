@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Video API tester</title>
+
+	<script type="text/javascript" src="public/javascripts/jquery-1.12.2.min.js"></script>
+
+
+	<script>
+		$(document).ready(function(){
+			$('#submit').on('click', function(e){
+				$form = $('#test-form');
+				var timeline_data = [];
+				$('select[name=video\\[\\]]').each(function(i, e){
+					timeline_data[i] = {
+						video: $($('select[name=video\\[\\]]')[i]).val(),
+						video_start: $($('input[name=video_start\\[\\]]')[i]).val(),
+						video_end: $($('input[name=video_end\\[\\]]')[i]).val(),
+						timeline_start: $($('input[name=timeline_start\\[\\]]')[i]).val(),
+						timeline_layer: $($('input[name=timeline_layer\\[\\]]')[i]).val(),
+						volume: $($('input[name=volume\\[\\]]')[i]).val(),
+						top_left: $($('input[name=top_left\\[\\]]')[i]).val(),
+						bottom_right: $($('input[name=bottom_right\\[\\]]')[i]).val(),
+					};
+				})
+				.promise()
+				.done( function(){
+					console.log(timeline_data)
+					$.ajax({
+						url: "/editor",
+						data: {items: timeline_data},
+						method: "post",
+						dataType: "json"
+					}).done(function( data ) {
+						console.log(data);
+					});
+				});
+
+				e.preventDefault();
+				return false;
+			});
+		})
+
+	</script>
+</head>
+<body>
+	<form id="test-form" method="POST" action="/editor">
+		<select name="video[]">
+			<option value="">None</option>
+			{{#videos}}
+			<option value="{{name}}">{{name}}</option>
+			{{/videos}}
+		</select>
+
+		<input type="text" name="video_start[]" placeholder="video start">
+		<input type="text" name="video_end[]" placeholder="video end">
+
+		<input type="text" name="timeline_start[]" placeholder="timeline start">
+		<input type="text" name="timeline_layer[]" placeholder="timeline layer">
+
+		<input type="text" name="volume[]" placeholder="volume (percent)">
+		<input type="text" name="top_left[]" placeholder="0,0">
+		<input type="text" name="bottom_right[]" placeholder="0,0">
+		<br><br><br><br>
+
+
+		<select  name="video[]">
+			<option value="">None</option>
+			{{#videos}}
+			<option value="{{name}}">{{name}}</option>
+			{{/videos}}
+		</select>
+
+
+		<input type="text" name="video_start[]" placeholder="video start">
+		<input type="text" name="video_end[]" placeholder="video end">
+
+		<input type="text" name="timeline_start[]" placeholder="timeline start">
+		<input type="text" name="timeline_layer[]" placeholder="timeline layer">
+
+		<input type="text" name="volume[]" placeholder="volume (percent)">
+		<input type="text" name="top_left[]" placeholder="0,0">
+		<input type="text" name="bottom_right[]" placeholder="0,0">		
+		<br><br><br><br>
+
+		<select name="video[]">
+			<option value="">None</option>
+			{{#videos}}
+			<option value="{{name}}">{{name}}</option>
+			{{/videos}}
+		</select>
+
+		<input type="text" name="video_start[]" placeholder="video start">
+		<input type="text" name="video_end[]" placeholder="video end">
+
+		<input type="text" name="timeline_start[]" placeholder="timeline start">
+		<input type="text" name="timeline_layer[]" placeholder="timeline layer">
+
+		<input type="text" name="volume[]" placeholder="volume (percent)">
+		<input type="text" name="top_left[]" placeholder="0,0">
+		<input type="text" name="bottom_right[]" placeholder="0,0">		
+		<br><br><br><br>
+
+		<select name="video[]">
+			<option value="">None</option>
+			{{#videos}}
+			<option value="{{name}}">{{name}}</option>
+			{{/videos}}
+		</select>
+
+		<input type="text" name="video_start[]" placeholder="video start">
+		<input type="text" name="video_end[]" placeholder="video end">
+
+		<input type="text" name="timeline_start[]" placeholder="timeline start">
+		<input type="text" name="timeline_layer[]" placeholder="timeline layer">
+
+		<input type="text" name="volume[]" placeholder="volume (percent)">
+		<input type="text" name="top_left[]" placeholder="0,0">
+		<input type="text" name="bottom_right[]" placeholder="0,0">
+		<br>
+		<br>
+		<br>
+	</form>
+		<button id="submit">Go</button>
+</body>
+</html>

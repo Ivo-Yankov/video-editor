@@ -1,0 +1,17 @@
+Слага в малко квадратче второто видео върху първото. Второто видео се появява между 10 - 20 секунда. 
+Смесва аудиото на двата файла. Трябва да се изреже аудиото да бъде само в интервала когато се вижда видеото.
+След края на видеото, в крадратчето остава последния кадър от второто видео.
+
+ffmpeg 
+	-i video1.mp4
+	-i cena.mp4
+	-filter_complex "
+		nullsrc=size=1280x720 [base];
+		[0:v] setpts=PTS-STARTPTS, scale=1280x720, trim=start=0:end=30 [v1];
+		[1:v] setpts=PTS+10/TB, scale=300x300, trim=start=10:end=20,  [v2];
+		[base][v1]       overlay=shortest=1       [base+v1];
+		[base+v1][v2] overlay=shortest=1:x=100:main_w-overlay_w-50:main_h-overlay_h-50;
+		amix=inputs=2
+" outuputu.mp4
+
+ffmpeg  -i video1.mp4 -i cena.mp4 -filter_complex " nullsrc=size=1280x720 [base]; [0:v] setpts=PTS-STARTPTS, scale=1280x720, trim=start=0:end=30 [v1]; [1:v] setpts=PTS+10, scale=300x300, trim=start=10:end=20 [v2]; [base][v1]       overlay=shortest=1       [base+v1]; [base+v1][v2] overlay=shortest=1:x=100:main_w-overlay_w-50:main_h-overlay_h-50; amix=inputs=2" outuputu.mp4

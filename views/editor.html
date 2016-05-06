@@ -1,0 +1,52 @@
+<<!DOCTYPE html>
+<html>
+<head>
+	<title>Video Editor</title>
+	<link rel="stylesheet" type="text/css" href="/stylesheets/style.css">
+	<script type="text/javascript" src="javascripts/editor.js"></script>
+</head>
+<body>
+
+</body>
+</html>
+
+
+<div id="editor" ng-controller="EditorController">
+	<div id="media-row" class="row">
+			<div class="media-container clearfix col-md-6 col">
+        <div data-id="{{index}}" ng-repeat="(index, video) in videos" class="video" editor-media-ready>
+        	<div ng-click="previewMedia()">
+	          <img ng-attr-src="{{video.thumbnail}}" />
+	        </div>
+        </div>
+			</div>
+
+	    <div class="video-container clearfix col-md-6 col">
+	        <video class="media-preview video-js vjs-default-skin" preload="none" data-setup="{}" video-ready>
+	        	<source type='video/mp4'  src="/api/videos/stream"/>
+	        </video>
+
+	        <div class="btn-group" id="player-controls">
+		        <button class="btn btn-primary" ng-click="play()"><span class="glyphicon glyphicon-play" aria-hidden="true"></span></button>
+						<button class="btn btn-primary" ng-click="pause()"><span class="glyphicon glyphicon-pause" aria-hidden="true"></span></button>
+						<button class="btn btn-primary" ng-click="stop()"><span class="glyphicon glyphicon-stop" aria-hidden="true"></span></button>
+					</div>
+	    </div>
+	</div>
+
+	<div id="timeline-row" class="row">
+		<div class="col-md-1 col">
+			<!-- <button ng-click="addLayer()">add layer</button><br> -->
+			<button ng-click="timelineZoomIn()">zoom in</button><br>
+			<button ng-click="timelineZoomOut()">zoom out</button><br>
+			<button ng-click="save()">save</button><br>
+		</div>
+		<div id="timeline-container" class="col-md-11 col">
+			<div id="timeline" ng-mousedown="setMarker($event, $this)">
+				<div id="timeline-marker"><div id="timeline-handle"></div></div>
+				<div id="timeline-layer-0" class="timeline-layer clearfix video-layer" editor-timeline-layer-ready></div>
+				<div id="timeline-layer-1" class="timeline-layer clearfix audio-layer" editor-timeline-layer-ready></div>
+			</div>
+		</div>
+	</div>
+</div>
