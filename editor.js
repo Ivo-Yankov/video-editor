@@ -103,7 +103,10 @@ module.exports = {
 		// ]);
 
 		// TODO TODO TODO this shit doesnt add shibani kavichki
+		var filter_string = '"' + this.complex_filters.join(";") + '"';
 		this.ffmpeg.complexFilter(this.complex_filters);
+
+		this.ffmpeg.addOption('-map', this.streamNameToString( this.streams.last_video_name ) );
 
 		this.ffmpeg.save(path.join(__dirname, '/public/videos', '/test-mest.mp4'));
 
@@ -142,7 +145,12 @@ module.exports = {
 		});
 
 		this.ffmpeg.on('error', function(err, stdout, stderr) {
-			console.log('Cannot process video: ' + err.message);
+			console.log('---------');
+			console.log(stdout);
+			console.log('---------');
+			console.log(stderr);
+			console.log('---------');
+			console.log('Error: ' + err.message);
 		});
 
 		this.ffmpeg.on('end', function() {
