@@ -9,9 +9,35 @@ ffmpeg
 		nullsrc=size=1280x720 [base];
 		[0:v] setpts=PTS-STARTPTS, scale=1280x720, trim=start=0:end=30 [v1];
 		[1:v] setpts=PTS+10/TB, scale=300x300, trim=start=10:end=20,  [v2];
+		aevalsrc=0:d=10[a1];
+		[a1][1:a]concat=n=2:v=0:a=1[a2];
 		[base][v1]       overlay=shortest=1       [base+v1];
 		[base+v1][v2] overlay=shortest=1:x=100:main_w-overlay_w-50:main_h-overlay_h-50;
-		amix=inputs=2
+		[0:a][a2]amix=inputs=2
 " outuputu.mp4
 
-ffmpeg  -i video1.mp4 -i cena.mp4 -filter_complex " nullsrc=size=1280x720 [base]; [0:v] setpts=PTS-STARTPTS, scale=1280x720, trim=start=0:end=30 [v1]; [1:v] setpts=PTS+10, scale=300x300, trim=start=10:end=20 [v2]; [base][v1]       overlay=shortest=1       [base+v1]; [base+v1][v2] overlay=shortest=1:x=100:main_w-overlay_w-50:main_h-overlay_h-50; amix=inputs=2" outuputu.mp4
+
+ffmpeg 
+	-i video1.mp4
+	-i cena.mp4
+	-filter_complex "
+		nullsrc=size=1280x720 [base];
+		[0:v] setpts=PTS-STARTPTS, scale=1280x720, trim=start=0:end=30 [v1];
+		[0:a]atrim=0:30[a3];
+		[1:v] setpts=PTS+0/TB, scale=300x300, trim=start=10:end=20 [v2];
+		aevalsrc=0:d=10[a1];
+		[1:a]atrim=10:20[a11];
+		[a1][a11]concat=n=2:v=0:a=1[a2];
+		[base][v1] overlay=shortest=1 [base+v1];
+		[base+v1][v2] overlay=eof_action=pass:x=100:main_w-overlay_w-50:main_h-overlay_h-50;
+		[a3][a2]amix=inputs=2
+	"
+	outuputu.mp4
+
+---------------------------
+
+ffmpeg -i video1.mp4 -i cena.mp4 -filter_complex "nullsrc=size=1280x720[base];[0:v]setpts=PTS-STARTPTS,scale=1280x720, trim=start=0:end=30[v1];[0:a]atrim=0:30[a3];[1:v]setpts=PTS+0/TB,scale=300x300,trim=start=10:end=20[v2];aevalsrc=0:d=10[a1];[1:a]atrim=10:20[a11];[a1][a11]concat=n=2:v=0:a=1[a2];[base][v1]overlay=shortest=1[base+v1];[base+v1][v2] overlay=eof_action=pass:x=100:main_w-overlay_w-50:main_h-overlay_h-50[o1];[a3][a2]amix=inputs=2" -map "[o1]" outuputu.mp4
+
+---------------------------
+
+ffmpeg -i F:\repositories\video-editor\public\videos\video1.mp4 -i F:\repositories\video-editor\public\videos\cena.mp4 -y -filter_complex nullsrc=size=1280x720[base];[0:v]setpts=PTS-STARTPTS,scale=1280x720,trim=start=0:end=30[v0];[2:v]setpts=PTS+0/TB,scale=300x300,trim=start=10:end=20[v2];[base][v0]overlay=shortest=1[o0];[o0][v2]overlay=eof_action=pass:x=100:main_w-overlay_w-50:main_h-overlay_h-50[o1];[a1]atrim=0:30[a0];aevalsrc=0:d=10[a1];[a3]atrim=10:20[a2];[a1][a2]concat=n=2:v=0:a=1[a3];[a0][a3]amix=inputs=2 -map [o1] -map [a4] F:\repositories\video-editor\public\videos\test-mest.mp4

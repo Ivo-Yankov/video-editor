@@ -14,22 +14,33 @@ module.exports = {
 		last_video_name : "base"
 	},
 	complex_filters : [],
+	input_index : 0,
 
 	render: function (data) {
 		console.log(data);
 
 		this.init();
 
+		var duration = 40;
+
+		this.addInput('color=black:s=1280x720', {
+			declaration: [ 'setpts=PTS+0/TB', 'scale=1280x720', 'trim=start=0:end=' + duration ],
+			overlay: [ 'overlay=shortest=1' ]
+		}, {}, 'lavfi');
+
 		this.addInput(
 			path.join(__dirname, '/public/videos', '/video1.mp4'), 
 			{
-				declaration: [ 'setpts=PTS-STARTPTS', 'scale=1280x720', 'trim=start=0:end=30' ],
-				overlay: [ 'overlay=shortest=1' ]
+				declaration: [ 'setpts=PTS+0/TB', 'scale=1280x720', 'trim=start=0:end=30' ],
+				overlay: [ 'overlay=eof_action=pass' ]
 			},
 			{
 				start: 0,
+				end: 30,
+				offset: 0,
 				filters: ['atrim=0:30'],
-			});
+			}
+		);
 
 		this.addInput(
 			path.join(__dirname, '/public/videos', '/cena.mp4'),
@@ -39,12 +50,51 @@ module.exports = {
 			},
 			{
 				start: 10,
+				end: 20,
+				offset: 0,
 				filters: ['atrim=10:20']
 			}
 		);
 
-		//Create base video stream; set its resolution
-		this.addFilter( 'nullsrc=size=' + this.options.resolution + this.streamNameToString( this.streams.last_video_name ) );
+		this.addInput(
+			path.join(__dirname, '/public/videos', '/cena.mp4'),
+			{
+				declaration: [ 'setpts=PTS+0/TB', 'scale=500x500', 'trim=start=25:end=35' ],
+				overlay: [ 'overlay=eof_action=pass:x=500:main_w-overlay_w-500:main_h-overlay_h-75' ]
+			},
+			{
+				start: 25,
+				end: 35,
+				offset: -25,
+				filters: ['atrim=25:35']
+			}
+		);
+
+
+		this.addInput(
+			path.join(__dirname, '/public/videos', '/cena.mp4'),
+			{
+				declaration: [ 'setpts=PTS+0/TB', 'scale=1280x720', 'trim=start=34:end=40' ],
+				overlay: [ 'overlay=eof_action=pass' ]
+			},
+			{
+				start: 34,
+				end: 40,
+				offset: 0,
+				filters: ['atrim=34:40']
+			}
+		);		
+
+		//Create base video stream and set resolution
+		var baseFilter = 'nullsrc='; 
+		baseFilter += 'size=' + this.options.resolution;
+		// var endFilter = baseFilter;
+
+		baseFilter += this.streamNameToString( this.streams.last_video_name );
+		// endFilter += this.streamNameToString( 'endvideo' );
+
+		this.addFilter( baseFilter );
+		// this.addFilter( endFilter );
 
 		//Declaration step
 		//Declare video streams
@@ -66,8 +116,24 @@ module.exports = {
 			}
 		}
 
+
+
+		// //end overlay
+		// var end_overlay = this.streamNameToString( this.streams.last_video_name )
+		// var end_overlay_name = "o" + overlay_index;
+
+		// overlay_index++;
+
+		// end_overlay += this.streamNameToString( 'endvideo' );
+		// end_overlay += "overlay=shortest=1";
+		// end_overlay += this.streamNameToString( end_overlay_name );
+		
+		// this.streams.last_video_name = end_overlay_name;
+		// this.addFilter( end_overlay );
+
 		//Overlay step
 		var overlay_index = 0;
+
 		for ( var i = 0; i < this.streams.video.length; i++ ) {
 			var stream = this.streams.video[i];
 			if ( stream.options.overlay && stream.options.overlay.length ) {
@@ -80,7 +146,6 @@ module.exports = {
 				var overlay_name = "o" + overlay_index;
 				this.streams.last_video_name = overlay_name;
 
-
 				//todo dont name the last overlay or map that stream to the output
 				filter += this.streamNameToString( overlay_name );
 
@@ -91,43 +156,63 @@ module.exports = {
 			}
 		}
 
+
+
 		//Audio step
 		var amix_filter = "";
 		var amix_count = 0;
 
 		for ( var i = 0; i < this.streams.audio.length; i++ ) {
 			filter = "";
-			concat_filter = "";
+			
+			concat_filter_start = "";
+			concat_count = 1;
 			var stream = this.streams.audio[i];
-			if ( stream.options.start ) {
-				// 'aevalsrc=0:d=10[a1]',
-				// '[a1][a11]concat=n=2:v=0:a=1[a2]',
-				filter = 'aevalsrc=0:d=' + stream.options.start + this.streamNameToString( this.streams.last_audio_name );
+			if ( ! isEmpty( stream.options ) ) {
+				if ( stream.options.start ) {
+					filter = 'aevalsrc=0:d=' + stream.options.start + this.streamNameToString( this.streams.last_audio_name );
+					this.addFilter( filter );
+
+					concat_filter_start = this.streamNameToString( this.streams.last_audio_name );
+
+					this.incrementAudioStreamName();
+					concat_count++;
+				}
+
+				filter = this.streamNameToString( stream.input_index + ":a" );
+				filter += stream.options.filters.join(',');
+				
+				var audio_stream_name = this.streamNameToString( this.streams.last_audio_name ); 
+
+				filter += audio_stream_name;
+				this.incrementAudioStreamName();
+
 				this.addFilter( filter );
 
-				concat_filter = this.streamNameToString( this.streams.last_audio_name );
+				concat_filter_end = "";
+				if ( stream.options.end < duration ) {
+					var end_silence_duration = duration - stream.options.end;
+					filter = 'aevalsrc=0:d=' + end_silence_duration + this.streamNameToString( this.streams.last_audio_name );
+					this.addFilter( filter );
 
-				//increment the stream name
+					concat_filter_end = this.streamNameToString( this.streams.last_audio_name );
+
+					this.incrementAudioStreamName();	
+					concat_count++;			
+				}
+
+				if ( concat_filter_start || concat_filter_end ) {
+					var concat_filter = concat_filter_start + audio_stream_name + concat_filter_end;
+					concat_filter += "concat=n=" + concat_count + ":v=0:a=1";
+					this.incrementAudioStreamName();
+					concat_filter += this.streamNameToString( this.streams.last_audio_name );
+					this.addFilter( concat_filter );
+				}
+
+				amix_count++;
+				amix_filter += this.streamNameToString( this.streams.last_audio_name );
 				this.incrementAudioStreamName();
 			}
-
-			filter = this.streamNameToString( stream.name );
-			filter += stream.options.filters.join(',');
-			filter += this.streamNameToString( this.streams.last_audio_name );
-			this.addFilter( filter );
-			// 	'[1:a]atrim=10:20[a11]',
-
-			if ( concat_filter ) {
-				concat_filter += this.streamNameToString( this.streams.last_audio_name );
-				concat_filter += "concat=n=2:v=0:a=1";
-				this.incrementAudioStreamName();
-				concat_filter += this.streamNameToString( this.streams.last_audio_name );
-				this.addFilter( concat_filter );
-			}
-
-			amix_count++;
-			amix_filter += this.streamNameToString( this.streams.last_audio_name );
-			this.incrementAudioStreamName();
 		}
 
 		if ( amix_count > 1 ) {
@@ -160,31 +245,9 @@ module.exports = {
 
 		this.ffmpeg.addOption('-map', this.streamNameToString( this.streams.last_video_name ) );
 		this.ffmpeg.addOption('-map', this.streamNameToString( this.streams.last_audio_name ) );
+		this.ffmpeg.addOption('-t', duration );
 
-		this.ffmpeg.save(path.join(__dirname, '/public/videos', '/test-mest.mp4'));
-
-		/*
-		var file = path.join(__dirname, '/public/videos', '/video1.mp4');
-
-		this.addVideoTrack(file, [
-			'-t 10'
-		])
-		this.ffmpeg.seekInput(50);
-		this.addVideoTrack(file, [
-			'-t 20'
-		]);
-
-		// this.setOutput("test-1.mp4");
-		// this.ffmpeg.run();
-
-		this.ffmpeg.mergeToFile("merged.mp4", path.join(__dirname, '/temp'));
-
-		//Create the ffmpeg object
-		// this.init();
-		// this.addVideoTrack('');
-		// this.output('test.mp4').run();
-
-		*/
+		this.ffmpeg.save(path.join(__dirname, '/public/videos', '/test-mest-1.mp4'));
 		return true;
 	},
 
@@ -220,10 +283,16 @@ module.exports = {
 		this.ffmpeg.output(file);
 	},
 
-	addInput: function(file, video_options, audio_options) {
+	addInput: function(file, video_options, audio_options, format) {
 		this.ffmpeg.addInput(file);
+
+		if ( format ) {
+			this.ffmpeg.inputFormat(format);
+		}
+
 		this.streams.video.push( this.addTrack( file, 'v', video_options ) );
 		this.streams.audio.push( this.addTrack( file, 'a', audio_options ) );
+		this.input_index++;
 	},
 
 	addTrack: function( file, type, options ) {
@@ -231,9 +300,8 @@ module.exports = {
 			options = [];
 		}
 
-		//TODO fix the input index
-		var input_index = this.streams.video.length + this.streams.audio.length;
-
+		var input_index = this.input_index;
+		
 		return {
 			filename : file,
 			name : type + "" + input_index,
@@ -258,3 +326,12 @@ module.exports = {
 		this.streams.last_audio_name = "a" + ( parseInt(this.streams.last_audio_name.replace("a", "")) + 1 );
 	}
 };
+
+function isEmpty(obj) {
+    for(var prop in obj) {
+        if(obj.hasOwnProperty(prop))
+            return false;
+    }
+
+    return true;
+}
