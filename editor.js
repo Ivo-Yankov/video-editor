@@ -17,84 +17,103 @@ module.exports = {
 	input_index : 0,
 
 	render: function (data) {
-		console.log(data);
+		var clips = data.clips;
+		var resolution_width = "1280";
+		var resolution_height = "720";
+		var resolution = resolution_width + "x" + resolution_height;
+		var background = "black";
+		var uploads_folder = '/public/videos/';
 
 		this.init();
 
-		var duration = 40;
-
-		this.addInput('color=black:s=1280x720', {
-			declaration: [ 'setpts=PTS+0/TB', 'scale=1280x720', 'trim=start=0:end=' + duration ],
+		// Add base input
+		this.addInput('color=' + background + ':s=' + resolution, {
+			declaration: [ 'setpts=PTS+0/TB', 'scale=' + resolution ],
 			overlay: [ 'overlay=shortest=1' ]
 		}, {}, 'lavfi');
 
-		this.addInput(
-			path.join(__dirname, '/public/videos', '/video1.mp4'), 
-			{
-				declaration: [ 'setpts=PTS+0/TB', 'scale=1280x720', 'trim=start=0:end=30' ],
-				overlay: [ 'overlay=eof_action=pass' ]
-			},
-			{
-				start: 0,
-				end: 30,
-				offset: 0,
-				filters: ['atrim=0:30'],
-			}
-		);
+		var duration = 0;
 
-		this.addInput(
-			path.join(__dirname, '/public/videos', '/cena.mp4'),
-			{
-				declaration: [ 'setpts=PTS+0/TB', 'scale=300x300', 'trim=start=10:end=20' ],
-				overlay: [ 'overlay=eof_action=pass:x=100:main_w-overlay_w-50:main_h-overlay_h-50' ]
-			},
-			{
-				start: 10,
-				end: 20,
-				offset: 0,
-				filters: ['atrim=10:20']
-			}
-		);
-
-		this.addInput(
-			path.join(__dirname, '/public/videos', '/cena.mp4'),
-			{
-				declaration: [ 'setpts=PTS+0/TB', 'scale=500x500', 'trim=start=25:end=35' ],
-				overlay: [ 'overlay=eof_action=pass:x=500:main_w-overlay_w-500:main_h-overlay_h-75' ]
-			},
-			{
-				start: 25,
-				end: 35,
-				offset: -25,
-				filters: ['atrim=25:35']
-			}
-		);
+		for( var i = 0; i < clips.length; i++ ) {
+			var clip = clips[i];
+			clip.end = Number(clip.end);
+			clip.start = Number(clip.start);
+			clip.timeline_start = Number(clip.timeline_start);
+			console.log(clip);
 
 
-		this.addInput(
-			path.join(__dirname, '/public/videos', '/cena.mp4'),
-			{
-				declaration: [ 'setpts=PTS+0/TB', 'scale=1280x720', 'trim=start=34:end=40' ],
-				overlay: [ 'overlay=eof_action=pass' ]
-			},
-			{
-				start: 34,
-				end: 40,
-				offset: 0,
-				filters: ['atrim=34:40']
+			var timeline_end = clip.end - clip.start + clip.timeline_start;
+			if ( timeline_end > duration ) {
+				duration = timeline_end;
 			}
-		);		
+
+
+			var filepath =  path.join(__dirname, uploads_folder, clip.file);
+
+			var video_options = {
+				declaration: [],
+				overlay : []
+			};
+
+			var audio_options = {
+				start: clip.start,
+				end: clip.end,
+				filters: []
+			};
+
+			var offset = clip.timeline_start - clip.start;
+			if ( clip.has_video ) {
+				// Create the video declaration step filters
+ 				video_options.declaration.push( 'setpts=PTS+' + offset + '/TB' );
+
+	 			var width = clip.bottom_right_x - clip.top_left_x;
+	 			var height = clip.bottom_right_y - clip.top_left_y;
+	 			if( width != resolution_width || height != resolution_height ) {
+	 				video_options.declaration.push( 'scale=' + height + 'x' + width );
+	 			}
+
+	 			video_options.declaration.push( 'trim=start=' + clip.start + ':end=' + clip.end );
+
+				// Create the video overlay step filter
+				var overlay_filter = 'overlay=eof_action=pass';
+	 			overlay_is_not_full_res = ( clip.top_left_x != 0 
+	 				|| clip.top_left_y != 0 
+	 				|| clip.bottom_right_x != resolution_width
+	 				|| clip.bottom_right_y != resolution_height );
+
+	 			if ( overlay_is_not_full_res ) {
+	 				overlay_filter += ":x=" + clip.top_left_x + ":y=" + clip.top_left_y;
+	 			}
+
+	 			video_options.overlay.push( overlay_filter );
+
+			}
+
+			if ( clip.has_audio ) {
+				// Create the audio filters
+ 				audio_options.filters.push( 'asetpts=PTS+' + offset + '/TB' );
+
+				audio_options.filters.push( 'atrim=start=' + clip.start + ':end=' + clip.end );
+
+				if ( clip.volume || clip.volume === 0 ) {
+					audio_options.filters.push( 'volume=' + clip.volume );
+				}
+			}
+
+			console.log(video_options);
+			console.log(audio_options);
+
+			// Add the input
+			this.addInput(filepath, video_options, audio_options);
+		}
 
 		//Create base video stream and set resolution
 		var baseFilter = 'nullsrc='; 
-		baseFilter += 'size=' + this.options.resolution;
-		// var endFilter = baseFilter;
+		baseFilter += 'size=' + resolution;
 
 		baseFilter += this.streamNameToString( this.streams.last_video_name );
-		// endFilter += this.streamNameToString( 'endvideo' );
 
 		this.addFilter( baseFilter );
-		// this.addFilter( endFilter );
 
 		//Declaration step
 		//Declare video streams
@@ -115,21 +134,6 @@ module.exports = {
 				
 			}
 		}
-
-
-
-		// //end overlay
-		// var end_overlay = this.streamNameToString( this.streams.last_video_name )
-		// var end_overlay_name = "o" + overlay_index;
-
-		// overlay_index++;
-
-		// end_overlay += this.streamNameToString( 'endvideo' );
-		// end_overlay += "overlay=shortest=1";
-		// end_overlay += this.streamNameToString( end_overlay_name );
-		
-		// this.streams.last_video_name = end_overlay_name;
-		// this.addFilter( end_overlay );
 
 		//Overlay step
 		var overlay_index = 0;
@@ -216,48 +220,38 @@ module.exports = {
 		}
 
 		if ( amix_count > 1 ) {
-			amix_filter += "amix=inputs=" + amix_count + this.streamNameToString( this.streams.last_audio_name );
+			amix_filter += "amerge=inputs=" + amix_count;
+			amix_filter += this.streamNameToString( this.streams.last_audio_name );
 			this.addFilter( amix_filter );
 		}
-
-
-
-		// this.ffmpeg.complexFilter([
-
-		// 	// base
-		// 	'nullsrc=size=1280x720 [base]',
-
-		// 	// video
-		// 	'[0:v]setpts=PTS-STARTPTS,scale=1280x720,trim=start=0:end=30[v1]',
-		// 	'[1:v]setpts=PTS+0/TB,scale=300x300,trim=start=10:end=20[v2]',
-		// 	'[base][v1]overlay=shortest=1[base+v1]',
-		// 	'[base+v1][v2]overlay=eof_action=pass:x=100:main_w-overlay_w-50:main_h-overlay_h-50',
-			
-		// 	// audio
-		// 	'[0:a]atrim=0:30[a3]',
-		// 	'aevalsrc=0:d=10[a1]',
-		// 	'[1:a]atrim=10:20[a11]',
-		// 	'[a1][a11]concat=n=2:v=0:a=1[a2]',
-		// 	'[a3][a2]amix=inputs=2'
-		// ]);
 
 		this.ffmpeg.complexFilter(this.complex_filters);
 
 		this.ffmpeg.addOption('-map', this.streamNameToString( this.streams.last_video_name ) );
 		this.ffmpeg.addOption('-map', this.streamNameToString( this.streams.last_audio_name ) );
 		this.ffmpeg.addOption('-t', duration );
+		this.ffmpeg.addOption('-ac', amix_count );
 
-		this.ffmpeg.save(path.join(__dirname, '/public/videos', '/test-mest-1.mp4'));
+		this.ffmpeg.save(path.join(__dirname, '/public/videos', '/test-mest-2.mp4'));
 		return true;
 	},
 
 	init: function () {
+		this.ffmpeg = {};
+		this.options = {};
+		this.streams = {
+			audio : [],
+			video : [],
+			last_audio_name : "a0",
+			last_video_name : "base"
+		};
+		this.complex_filters = [];
+		this.input_index = 0;
+
 		this.ffmpeg = ffmpeg();
 
 		this.ffmpeg.on('progress', function(progress) {
-			if(parseInt(progress.percent) % 5 == 0){
-				console.log('Processing: ' + progress.percent + '% done');
-			}
+			console.log('Processing: ' + progress.timemark);
 		});
 
 		this.ffmpeg.on('error', function(err, stdout, stderr) {
@@ -274,9 +268,6 @@ module.exports = {
 			console.log(commandLine);
 			console.log('---------');
 		});
-
-		//todo
-		this.setOption('resolution', '1280x720');
 	},
 
 	setOutput: function(file){

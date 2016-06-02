@@ -12,23 +12,29 @@
 				$form = $('#test-form');
 				var timeline_data = [];
 				$('select[name=video\\[\\]]').each(function(i, e){
-					timeline_data[i] = {
-						video: $($('select[name=video\\[\\]]')[i]).val(),
-						video_start: $($('input[name=video_start\\[\\]]')[i]).val(),
-						video_end: $($('input[name=video_end\\[\\]]')[i]).val(),
-						timeline_start: $($('input[name=timeline_start\\[\\]]')[i]).val(),
-						timeline_layer: $($('input[name=timeline_layer\\[\\]]')[i]).val(),
-						volume: $($('input[name=volume\\[\\]]')[i]).val(),
-						top_left: $($('input[name=top_left\\[\\]]')[i]).val(),
-						bottom_right: $($('input[name=bottom_right\\[\\]]')[i]).val(),
-					};
+					if ( $($('select[name=video\\[\\]]')[i]).val() ) {
+						timeline_data.push({
+							'file': $($('select[name=video\\[\\]]')[i]).val(),
+							'start': $($('input[name=video_start\\[\\]]')[i]).val(),
+							'end': $($('input[name=video_end\\[\\]]')[i]).val(),
+							'timeline_start': $($('input[name=timeline_start\\[\\]]')[i]).val(),
+							'timeline_layer': $($('input[name=timeline_layer\\[\\]]')[i]).val(),
+							'volume': $($('input[name=volume\\[\\]]')[i]).val(),
+							'top_left_x': $($('input[name=top_left_x\\[\\]]')[i]).val(),
+							'top_left_y': $($('input[name=top_left_y\\[\\]]')[i]).val(),
+							'bottom_right_x': $($('input[name=bottom_right_x\\[\\]]')[i]).val(),
+							'bottom_right_y': $($('input[name=bottom_right_y\\[\\]]')[i]).val(),
+							'has_video': true,
+							'has_audio': true
+						});
+					}
 				})
 				.promise()
 				.done( function(){
-					console.log(timeline_data)
+					console.log({'clips' : timeline_data});
 					$.ajax({
 						url: "/editor",
-						data: {items: timeline_data},
+						data: {'clips' : timeline_data},
 						method: "post",
 						dataType: "json"
 					}).done(function( data ) {
@@ -58,29 +64,11 @@
 		<input type="text" name="timeline_start[]" placeholder="timeline start">
 		<input type="text" name="timeline_layer[]" placeholder="timeline layer">
 
-		<input type="text" name="volume[]" placeholder="volume (percent)">
-		<input type="text" name="top_left[]" placeholder="0,0">
-		<input type="text" name="bottom_right[]" placeholder="0,0">
-		<br><br><br><br>
-
-
-		<select  name="video[]">
-			<option value="">None</option>
-			{{#videos}}
-			<option value="{{name}}">{{name}}</option>
-			{{/videos}}
-		</select>
-
-
-		<input type="text" name="video_start[]" placeholder="video start">
-		<input type="text" name="video_end[]" placeholder="video end">
-
-		<input type="text" name="timeline_start[]" placeholder="timeline start">
-		<input type="text" name="timeline_layer[]" placeholder="timeline layer">
-
-		<input type="text" name="volume[]" placeholder="volume (percent)">
-		<input type="text" name="top_left[]" placeholder="0,0">
-		<input type="text" name="bottom_right[]" placeholder="0,0">		
+		<input type="text" name="volume[]" placeholder="1">
+		<input type="text" name="top_left_x[]" placeholder="0">
+		<input type="text" name="top_left_y[]" placeholder="0">
+		<input type="text" name="bottom_right_x[]" placeholder="720" value="720">
+		<input type="text" name="bottom_right_y[]" placeholder="1280" value="1280">
 		<br><br><br><br>
 
 		<select name="video[]">
@@ -96,9 +84,11 @@
 		<input type="text" name="timeline_start[]" placeholder="timeline start">
 		<input type="text" name="timeline_layer[]" placeholder="timeline layer">
 
-		<input type="text" name="volume[]" placeholder="volume (percent)">
-		<input type="text" name="top_left[]" placeholder="0,0">
-		<input type="text" name="bottom_right[]" placeholder="0,0">		
+		<input type="text" name="volume[]" placeholder="1">
+		<input type="text" name="top_left_x[]" placeholder="0">
+		<input type="text" name="top_left_y[]" placeholder="0">
+		<input type="text" name="bottom_right_x[]" placeholder="720" value="720">
+		<input type="text" name="bottom_right_y[]" placeholder="1280" value="1280">
 		<br><br><br><br>
 
 		<select name="video[]">
@@ -114,12 +104,33 @@
 		<input type="text" name="timeline_start[]" placeholder="timeline start">
 		<input type="text" name="timeline_layer[]" placeholder="timeline layer">
 
-		<input type="text" name="volume[]" placeholder="volume (percent)">
-		<input type="text" name="top_left[]" placeholder="0,0">
-		<input type="text" name="bottom_right[]" placeholder="0,0">
-		<br>
-		<br>
-		<br>
+		<input type="text" name="volume[]" placeholder="1">
+		<input type="text" name="top_left_x[]" placeholder="0">
+		<input type="text" name="top_left_y[]" placeholder="0">
+		<input type="text" name="bottom_right_x[]" placeholder="720" value="720">
+		<input type="text" name="bottom_right_y[]" placeholder="1280" value="1280">
+		<br><br><br><br>
+
+		<select name="video[]">
+			<option value="">None</option>
+			{{#videos}}
+			<option value="{{name}}">{{name}}</option>
+			{{/videos}}
+		</select>
+
+		<input type="text" name="video_start[]" placeholder="video start">
+		<input type="text" name="video_end[]" placeholder="video end">
+
+		<input type="text" name="timeline_start[]" placeholder="timeline start">
+		<input type="text" name="timeline_layer[]" placeholder="timeline layer">
+
+		<input type="text" name="volume[]" placeholder="1">
+		<input type="text" name="top_left_x[]" placeholder="0">
+		<input type="text" name="top_left_y[]" placeholder="0">
+		<input type="text" name="bottom_right_x[]" placeholder="720" value="720">
+		<input type="text" name="bottom_right_y[]" placeholder="1280" value="1280">
+		<br><br><br><br>
+
 	</form>
 		<button id="submit">Go</button>
 </body>

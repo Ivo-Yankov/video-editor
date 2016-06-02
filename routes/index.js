@@ -5,6 +5,8 @@ var appDir = path.dirname(require.main.filename);
 var mustacheExpress = require('mustache-express');
 var fs = require('file-system');
 var editor = require(path.join(appDir, '/editor.js'));
+var bodyParser = require('body-parser')
+
 /* GET home page. */
 router.get('/', function(req, res) {
 	var videos = [];
