@@ -20,7 +20,7 @@ router.get('/', function(req, res) {
         		videos.push({name: file});
         	});
         }
-		res.render('temp-api-interface.html', {
+		res.render('editor.html', {
 			videos: videos
 		});
 	});
