@@ -3,6 +3,7 @@
 <head>
 	<title>Video Editor</title>
 	<link rel="stylesheet" type="text/css" href="/stylesheets/style.css">
+	<script type="text/javascript" src="javascripts/jquery-3.1.0.min.js"></script>
 	<script type="text/javascript" src="javascripts/scripts.js"></script>
 </head>
 <body>
@@ -31,70 +32,10 @@
 		timeline controls
 	</div>
 	<div id="timeline-holder" class="ui-area">
-
-		<div id="timeline">
-
+		<div id="timeline" data-zoom="1" data-markers="50" data-duration="600" data-layerwidth="200">
 			<div class="layer">
-				<div class="timeline-ruler">
-					<div class="ruler-marker">00:01</div>
-					<div class="ruler-marker">00:02</div>
-					<div class="ruler-marker">00:03</div>
-					<div class="ruler-marker">00:04</div>
-					<div class="ruler-marker big">00:05</div>
-					<div class="ruler-marker">00:06</div>
-					<div class="ruler-marker">00:07</div>
-					<div class="ruler-marker">00:08</div>
-					<div class="ruler-marker">00:09</div>
-					<div class="ruler-marker">00:10</div>
-				</div>	
-				layer
-			</div>
-			<div class="layer">
-				<div class="timeline-ruler">
-					<div class="ruler-marker">00:01</div>
-					<div class="ruler-marker">00:02</div>
-					<div class="ruler-marker">00:03</div>
-					<div class="ruler-marker">00:04</div>
-					<div class="ruler-marker big">00:05</div>
-					<div class="ruler-marker">00:06</div>
-					<div class="ruler-marker">00:07</div>
-					<div class="ruler-marker">00:08</div>
-					<div class="ruler-marker">00:09</div>
-					<div class="ruler-marker">00:10</div>
-				</div>	
-				layer
-			</div>
-			<div class="layer">
-				<div class="timeline-ruler">
-					<div class="ruler-marker">00:01</div>
-					<div class="ruler-marker">00:02</div>
-					<div class="ruler-marker">00:03</div>
-					<div class="ruler-marker">00:04</div>
-					<div class="ruler-marker big">00:05</div>
-					<div class="ruler-marker">00:06</div>
-					<div class="ruler-marker">00:07</div>
-					<div class="ruler-marker">00:08</div>
-					<div class="ruler-marker">00:09</div>
-					<div class="ruler-marker">00:10</div>
-				</div>	
-				layer
-			</div>
-			<div class="layer">
-				<div class="timeline-ruler">
-					<div class="ruler-marker">00:01</div>
-					<div class="ruler-marker">00:02</div>
-					<div class="ruler-marker">00:03</div>
-					<div class="ruler-marker">00:04</div>
-					<div class="ruler-marker big">00:05</div>
-					<div class="ruler-marker">00:06</div>
-					<div class="ruler-marker">00:07</div>
-					<div class="ruler-marker">00:08</div>
-					<div class="ruler-marker">00:09</div>
-					<div class="ruler-marker">00:10</div>
-				</div>	
-				layer
-			</div>
-			
+				<div class="layer-media" data-id="videoid" data-start="10" data-duration="100" style="background-image: url(/videos/user/videoid/thumbnail.png)"></div>
+			</div>			
 		</div>
 	</div>
 </div>

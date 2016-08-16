@@ -94,9 +94,9 @@ body {
   width: 2000px;
   height: 60px;
 
-  -webkit-box-shadow: 1px 1px 1px 1px #cecece;
-  -moz-box-shadow: 1px 1px 1px 1px #cecece;
-  box-shadow: 1px 1px 1px 1px #cecece;
+  -webkit-box-shadow: 1px 1px 1px 1px #464545;
+  -moz-box-shadow: 1px 1px 1px 1px #464545;
+  box-shadow: 1px 1px 1px 1px #464545;
 
   background: #dedede;
   position: relative;
@@ -104,14 +104,12 @@ body {
 }
 
 .timeline-ruler {
-  width: 2000px;
+  width: 100%;
   position: absolute;
   top: 0;
   left: 0;
-  display: flex;
-  flex-flow: row wrap;
-  justify-content: space-around;
   height: 100%;
+  font-size: 0.8em;
 }
 
 .ruler-marker {
@@ -120,10 +118,11 @@ body {
   line-height: 30px;
   top: 50%;
   margin-top: -15px;
-  position: relative;
+  position: absolute;
     display: flex;
   justify-content: center;
   opacity: 0.7;
+  margin-left: -1px;
 }
 
 .ruler-marker:before, 
@@ -145,6 +144,10 @@ body {
   top: 100%;
 }
 
+.ruler-marker.big {
+  margin-left: -2px;
+}
+
 .ruler-marker.big:before, 
 .ruler-marker.big:after {
   border: 2px solid black;
@@ -157,3 +160,11 @@ body {
   top: 90%;
 }
 
+.layer-media {
+  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 500px;
+  background-size: auto 100%;
+}
