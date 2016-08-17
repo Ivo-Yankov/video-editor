@@ -110,6 +110,8 @@ body {
   left: 0;
   height: 100%;
   font-size: 0.8em;
+  opacity: 0.7;
+  z-index:0;
 }
 
 .ruler-marker {
@@ -167,4 +169,5 @@ body {
   top: 0;
   width: 500px;
   background-size: auto 100%;
+  z-index: 5;
 }
