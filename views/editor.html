@@ -2,8 +2,11 @@
 <html>
 <head>
 	<title>Video Editor</title>
+	<link rel="stylesheet" type="text/css" href="/stylesheets/jquery-ui.min.css">
+	<link rel="stylesheet" type="text/css" href="/stylesheets/jquery-ui.theme.min.css">
 	<link rel="stylesheet" type="text/css" href="/stylesheets/style.css">
 	<script type="text/javascript" src="javascripts/jquery-3.1.0.min.js"></script>
+	<script type="text/javascript" src="javascripts/jquery-ui.min.js"></script>
 	<script type="text/javascript" src="javascripts/scripts.js"></script>
 </head>
 <body>
@@ -30,8 +33,12 @@
 <div id="timeline-area" class="ui-area">
 	<div id="timeline-controls" class="ui-area">
 		Zoom:
-		<button id="zoom-plus" class="zoom-button" data-ammount="0.1">+</button>
-		<button id="zoom-minus" class="zoom-button" data-ammount="-0.1">-</button>
+		<button id="zoom-plus" class="zoom-button" data-amount="0.1">+</button>
+		<button id="zoom-minus" class="zoom-button" data-amount="-0.1">-</button>
+
+		<button id="add-layer">Add Layer</button>		
+
+		<button id="render">RENDER</button>
 	</div>
 	<div id="timeline-holder" class="ui-area">
 		<div id="timeline" data-zoom="1" data-markerdensity="1.5" data-duration="600" data-layerwidth="200">
