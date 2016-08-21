@@ -15,6 +15,15 @@
 </html>
 
 <div id="media-area" class="ui-area">
+    <form ref='uploadForm' 
+        id='uploadForm' 
+        action='/upload' 
+        method='POST' 
+        encType="multipart/form-data">
+            <input type="file" name="files" multiple/>
+            <input type='submit' value='Upload!' />
+    </form>	
+
 	<div id="media-library" class="clearfix">
 		{{#videos}}
 			<div class="media video">

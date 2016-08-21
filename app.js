@@ -5,12 +5,50 @@ var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var mustacheExpress = require('mustache-express');
-
+var passport = require('passport');
+var flash = require('connect-flash');
 var routes = require('./routes/index');
-var users = require('./routes/users');
-
+var bb = require('express-busboy');
+ 
 var app = express();
 var http = require('http').Server(app);
+
+//include models
+var User = require("./models/user").User;
+var Video = require("./models/video").Video;
+
+//database
+var mongo = require('mongodb');
+var mongoose = require('mongoose');
+var configDB = require('./config/database.js');
+mongoose.connect(configDB.url); // connect to our database
+
+
+var db = mongoose.connection;
+db.on('error', console.error.bind(console, 'connection error:'));
+db.once('open', function (callback) {
+  // yay! 
+});
+
+var configPassport = require('./config/passport'); // pass passport for configuration
+app.use(require('express-session')({ secret: 'keyboard cat', resave: true, saveUninitialized: true }));
+app.use(passport.initialize());
+app.use(passport.session());	
+app.use(flash());
+
+app.use(function(req, res, next){
+    res.locals.success_messages = req.flash('success_messages');
+    res.locals.error_messages = req.flash('error_messages');
+    next();
+});
+
+passport.serializeUser(function(user, done) {
+  done(null, user);
+});
+
+passport.deserializeUser(function(user, done) {
+  done(null, user);
+});
 
 // view engine setup
 app.engine('html', mustacheExpress());
@@ -25,8 +63,11 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(express.static(__dirname + '/public'));
-app.use('/users', users);
+
+bb.extend(app, { upload: true, path: 'public/uploads' });
+
 app.use('/', routes);
+
 
 app._router.stack.forEach(function(r){
   if (r.route && r.route.path){
