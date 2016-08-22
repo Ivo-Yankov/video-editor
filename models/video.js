@@ -3,6 +3,7 @@ var mongoose = require("mongoose");
 var videoSchema = new mongoose.Schema({
   title: String,
   filename: String,
+  filepath: String,
   tags: [{time: Number, text: String}],
   categories: [String],
   thumbnail: String,

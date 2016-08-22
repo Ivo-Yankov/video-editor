@@ -26,17 +26,17 @@
 
 	<div id="media-library" class="clearfix">
 		{{#videos}}
-			<div class="media video">
-				<img src="videos/user/videoid/thumbnail.png" draggable="false">
-				{{name}}
+			<div class="media video" data-id="" data-filepath="{{filepath}}" data-duration="{{metadata.format.duration}}">
+				<img src="{{thumbnail}}" draggable="false">
+				<h4 class="media-name">{{filename}}</h4>
 			</div>
 		{{/videos}}
 	</div>
 </div>
 
 <div id="preview-area" class="ui-area">
-	<video id="preview-final" class="preview-video" src="videos/video1.mp4" controls></video>
-	<video id="preview-current" class="preview-video" src="videos/video1.mp4" controls></video>
+	<video id="preview-current" class="preview-video" src="" controls></video>
+	<video id="preview-final" class="preview-video" src="" controls></video>
 </div>
 
 <div id="timeline-area" class="ui-area">
@@ -51,9 +51,7 @@
 	</div>
 	<div id="timeline-holder" class="ui-area">
 		<div id="timeline" data-zoom="1" data-markerdensity="1.5" data-duration="600" data-layerwidth="200">
-			<div class="layer">
-				<div class="layer-media" data-id="videoid" data-start="10" data-duration="100" style="background-image: url(/videos/user/videoid/thumbnail.png)"></div>
-			</div>			
+			<div class="layer"></div>			
 		</div>
 	</div>
 </div>

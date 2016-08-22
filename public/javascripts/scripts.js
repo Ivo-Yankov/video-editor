@@ -19,23 +19,33 @@
 			this.ruler_markers = parseInt(Math.round(this.zoom) * this.layer_width * this.marker_density);
 			this.initial_layer_width = this.layer_width;
 
-			$( ".media" ).draggable({ 
-				snap: ".layer, .layer:before",
-				snapMode: "inner",
+			$( ".media" )
+			.draggable({ 
+				snap: ".layer, .layer:before, .layer-media",
 				snapTolerance: 10,
-				helper: function(){
+				helper: function() {
 					$this = $(this);
 					var background = $this.find('img').attr('src');
-					var videoid = 'videoid';
-					var duration = '100';
-
-
-					return $("<div class='layer-media' data-id='" + videoid + "' data-duration='" + duration + "' style='background-image:url(" + background + ")'></div>");
+					var duration = $this.attr('data-duration');
+					var filepath = $this.attr('data-filepath');
+					return $("<div class='layer-media' data-filepath='" + filepath + "' data-duration='" + duration + "' style='background-image:url(" + background + ")'></div>");
 				},
 				stop: function( event, ui ) {
 					ui.helper.remove();
 				}
-			});			
+			})
+			.on('click', function() {
+				$('.media').not(this).removeClass('selected');
+				$this = $(this);
+
+				if ($this.hasClass('selected')) {
+					$('#preview-current').attr('src', '');
+				}
+				else {
+					$('#preview-current').attr('src', $this.attr('data-filepath'));
+				}
+				$(this).toggleClass('selected');
+			});
 
 			this.render();
 
@@ -121,8 +131,7 @@
 			}
 
 			media.draggable({ 
-				snap: ".layer, .layer:before",
-				snapMode: "inner",
+				snap: ".layer, .layer:before, .layer-media",
 				snapTolerance: 10,
 				stop: function( event, ui ) {
 				},
@@ -130,7 +139,6 @@
 			        selectedObjs = $('.layer-media.selected');
 			    },
 			    drag: function(event, ui) {
-
 			    	/*
 					// TODO move selected media items at once
 
@@ -212,7 +220,7 @@
 			});
 		},
 
-		isKeyPressed: function( key ){
+		isKeyPressed: function( key ) {
 			var keys = {
 				'control': 17,
 				'shift': 16
@@ -221,13 +229,13 @@
 			return Boolean(this.pressed_keys[keys[key]]);
 		},
 
-		renderVideo: function (){
+		renderVideo: function () {
 			$form = $('#test-form');
 			var timeline_data = [];
 			$('.layer-media').each(function(i, e){
 				$e = $(e);
 				timeline_data.push({
-					'file': 'video1.mp4',
+					'file': $e.attr('data-filepath'),
 					'start': 0,
 					'end': Number($e.attr('data-duration')),
 					'timeline_start': Number($e.attr('data-start')),
@@ -235,8 +243,8 @@
 					'volume': 1,
 					'top_left_x': 0,
 					'top_left_y': 0,
-					'bottom_right_x': 500,
-					'bottom_right_y': 500,
+					'bottom_right_x': 1280,
+					'bottom_right_y': 720,
 					'has_video': true,
 					'has_audio': true
 				});

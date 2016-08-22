@@ -13,26 +13,54 @@ var ffmpeg = require('fluent-ffmpeg');
 
 /* GET home page. */
 router.get('/', function(req, res) {
-	console.log("exists?: " + fs.existsSync("/public/videos/57b82fe5c61e57e81eb7abba/57b9c3b35a672ce422822534/") );
 	if ( !req.user ) {
 		return res.redirect('/login');
 	}
 
-	var videos = [];
+	Video.find({}, function (err, videos) {
+		console.log(videos);
+		var visible_videos = [];
+		for ( var i = 0; i < videos.length; i++ ) {
+			
+			if (!fs.existsSync(videos[i].filepath)){ 
 
-	fs.readdir('public/videos', function(err, files){
-		if ( err ) {
-            console.log("Error reading files: ", err);
-        } 
-        else {
-        	files.forEach(function(file){
-        		videos.push({name: file});
-        	});
-        }
+				// This causes a bug on upload and refresh!
+				(function(id){
+					videos[i].remove( function (err) {
+						if (err) {
+							console.log(err);
+						}
+						else {
+							console.log("Video was not found and was deleted from db: " + id);
+						}
+					});
+				})(videos[i]._id);
+			}
+			else {
+				videos[i].filepath = videos[i].filepath.replace( 'public/', '' );
+				console.log(videos[i]);
+				visible_videos.push(videos[i]);
+			}
+		}
+
 		res.render('editor.html', {
-			videos: videos
+			videos: visible_videos
 		});
-	});
+	});;
+
+
+
+	// fs.readdir('public/videos', function(err, files){
+	// 	if ( err ) {
+ //            console.log("Error reading files: ", err);
+ //        } 
+ //        else {
+ //        	files.forEach(function(file){
+ //        		videos.push({name: file});
+ //        	});
+ //        }
+
+	// });
 });
 
 router.post('/editor', function(req, res) {
@@ -90,7 +118,8 @@ router.post('/upload', function(req, res) {
 		if (!err) {
 			var new_video = new Video({
 				title: serverPath,
-				filename: path.replace('public',''),
+				filepath: path.replace('public',''),
+				filename: path.replace(/^.*[\\\/]/, ''),
 				owner: req.user._id
 			});
 
@@ -105,8 +134,8 @@ router.post('/upload', function(req, res) {
 					if(err){
 						console.log(err);
 					}
-					var split_filename = data.format.filename.split('\\');
-					split_filename.pop();
+					var split_filepath = data.format.filename.split('\\');
+					split_filepath.pop();
 					var folder = newVideo.getDirPath(true);
 					var screenshot_command = ffmpeg(path);
 					var duration = data.format.duration;
@@ -129,19 +158,19 @@ router.post('/upload', function(req, res) {
 						}).on('end', function() {
 							console.log('Processing finished!');
 							
-							var new_filename = folder + newVideo.filename.replace(/^.*[\\\/]/, '');
+							var new_filepath = folder + newVideo.filepath.replace(/^.*[\\\/]/, '');
 
 							Video.update({ _id: newVideo.id }, { 
 								$set: { 
 									metadata: metadata,
-									filename: new_filename,
-									thumbnail: folder + '/thumb.jpg'
+									filepath: new_filepath,
+									thumbnail: newVideo.getDirPath( false ) + 'thumb.jpg'
 								}
 							}, function(err, data){
 								if(err){
 									console.log(err);
 								}
-								fs.renameSync(path, new_filename);
+								fs.renameSync(path, new_filepath);
 							});
 						});
 					})(data, newVideo, folder);

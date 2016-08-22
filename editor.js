@@ -22,7 +22,7 @@ module.exports = {
 		var resolution_height = "720";
 		var resolution = resolution_width + "x" + resolution_height;
 		var background = "black";
-		var uploads_folder = '/public/videos/';
+		var uploads_folder = '/public/';
 
 		this.init();
 
@@ -41,12 +41,10 @@ module.exports = {
 			clip.timeline_start = Number(clip.timeline_start);
 			console.log(clip);
 
-
 			var timeline_end = clip.end - clip.start + clip.timeline_start;
 			if ( timeline_end > duration ) {
 				duration = timeline_end;
 			}
-
 
 			var filepath =  path.join(__dirname, uploads_folder, clip.file);
 
@@ -72,7 +70,7 @@ module.exports = {
 	 				video_options.declaration.push( 'scale=' + height + 'x' + width );
 	 			}
 
-	 			video_options.declaration.push( 'trim=start=' + clip.start + ':end=' + clip.end );
+	 			video_options.declaration.push( 'trim=start=' + clip.start + ':end=' + (offset + clip.end) );
 
 				// Create the video overlay step filter
 				var overlay_filter = 'overlay=eof_action=pass';
