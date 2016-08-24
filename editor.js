@@ -18,8 +18,8 @@ module.exports = {
 
 	render: function (data) {
 		var clips = data.clips;
-		var resolution_width = "1280";
-		var resolution_height = "720";
+		var resolution_width = "320";
+		var resolution_height = "180";
 		var resolution = resolution_width + "x" + resolution_height;
 		var background = "black";
 		var uploads_folder = '/public/';
@@ -39,7 +39,6 @@ module.exports = {
 			clip.end = Number(clip.end);
 			clip.start = Number(clip.start);
 			clip.timeline_start = Number(clip.timeline_start);
-			console.log(clip);
 
 			var timeline_end = clip.end - clip.start + clip.timeline_start;
 			if ( timeline_end > duration ) {
@@ -54,8 +53,8 @@ module.exports = {
 			};
 
 			var audio_options = {
-				start: clip.start,
-				end: clip.end,
+				start: clip.timeline_start,
+				end: clip.timeline_start + clip.end,
 				filters: []
 			};
 
@@ -66,9 +65,9 @@ module.exports = {
 
 	 			var width = clip.bottom_right_x - clip.top_left_x;
 	 			var height = clip.bottom_right_y - clip.top_left_y;
-	 			if( width != resolution_width || height != resolution_height ) {
-	 				video_options.declaration.push( 'scale=' + height + 'x' + width );
-	 			}
+	 			// if( width != resolution_width || height != resolution_height ) {
+	 				video_options.declaration.push( 'scale=' + width + 'x' + height );
+	 			// }
 
 	 			video_options.declaration.push( 'trim=start=' + clip.start + ':end=' + (offset + clip.end) );
 
@@ -91,15 +90,12 @@ module.exports = {
 				// Create the audio filters
  				audio_options.filters.push( 'asetpts=PTS+' + offset + '/TB' );
 
-				audio_options.filters.push( 'atrim=start=' + clip.start + ':end=' + clip.end );
+				audio_options.filters.push( 'atrim=start=' + (clip.start + offset) + ':end=' + (clip.end + offset) );
 
 				if ( clip.volume || clip.volume === 0 ) {
 					audio_options.filters.push( 'volume=' + clip.volume );
 				}
 			}
-
-			console.log(video_options);
-			console.log(audio_options);
 
 			// Add the input
 			this.addInput(filepath, video_options, audio_options);
@@ -171,8 +167,10 @@ module.exports = {
 			concat_count = 1;
 			var stream = this.streams.audio[i];
 			if ( ! isEmpty( stream.options ) ) {
+
+				// Audio does not start at 0
 				if ( stream.options.start ) {
-					filter = 'aevalsrc=0:d=' + stream.options.start + this.streamNameToString( this.streams.last_audio_name );
+					filter = 'aevalsrc=0:s=48000:d=' + stream.options.start + this.streamNameToString( this.streams.last_audio_name );
 					this.addFilter( filter );
 
 					concat_filter_start = this.streamNameToString( this.streams.last_audio_name );
@@ -191,10 +189,11 @@ module.exports = {
 
 				this.addFilter( filter );
 
+				// Audio does not end at the end of the whole movie
 				concat_filter_end = "";
 				if ( stream.options.end < duration ) {
 					var end_silence_duration = duration - stream.options.end;
-					filter = 'aevalsrc=0:d=' + end_silence_duration + this.streamNameToString( this.streams.last_audio_name );
+					filter = 'aevalsrc=0:s=48000:d=' + end_silence_duration + this.streamNameToString( this.streams.last_audio_name );
 					this.addFilter( filter );
 
 					concat_filter_end = this.streamNameToString( this.streams.last_audio_name );
@@ -206,21 +205,24 @@ module.exports = {
 				if ( concat_filter_start || concat_filter_end ) {
 					var concat_filter = concat_filter_start + audio_stream_name + concat_filter_end;
 					concat_filter += "concat=n=" + concat_count + ":v=0:a=1";
-					this.incrementAudioStreamName();
 					concat_filter += this.streamNameToString( this.streams.last_audio_name );
 					this.addFilter( concat_filter );
 				}
 
 				amix_count++;
 				amix_filter += this.streamNameToString( this.streams.last_audio_name );
-				this.incrementAudioStreamName();
+				// this.incrementAudioStreamName();
 			}
 		}
 
 		if ( amix_count > 1 ) {
+			this.incrementAudioStreamName();
 			amix_filter += "amerge=inputs=" + amix_count;
 			amix_filter += this.streamNameToString( this.streams.last_audio_name );
 			this.addFilter( amix_filter );
+		}
+		else if( !concat_filter_start && !concat_filter_end ) {
+			this.decrementAudioStreamName();
 		}
 
 		this.ffmpeg.complexFilter(this.complex_filters);
@@ -229,9 +231,10 @@ module.exports = {
 		this.ffmpeg.addOption('-map', this.streamNameToString( this.streams.last_audio_name ) );
 		this.ffmpeg.addOption('-t', duration );
 		this.ffmpeg.addOption('-ac', amix_count );
+		// this.ffmpeg.addOption('-c:a', 'libfdk_aac' );
+		this.ffmpeg.addOption('-b:a', '48k' );
 
-		this.ffmpeg.save(path.join(__dirname, '/public/videos', '/test-mest-2.mp4'));
-		return true;
+		return this.ffmpeg;
 	},
 
 	init: function () {
@@ -313,7 +316,11 @@ module.exports = {
 
 	incrementAudioStreamName: function() {
 		this.streams.last_audio_name = "a" + ( parseInt(this.streams.last_audio_name.replace("a", "")) + 1 );
-	}
+	},
+
+	decrementAudioStreamName: function( ) {
+		this.streams.last_audio_name = "a" + ( parseInt(this.streams.last_audio_name.replace("a", "")) - 1 );
+	},
 };
 
 function isEmpty(obj) {

@@ -8,9 +8,11 @@
 		initial_layer_width : "",
 		ruler_markers : "",
 		pressed_keys: [],
+		socket: "",
 
 		init: function() {
 
+			this.socket = io();
 			this.timeline = $('#timeline');
 			this.zoom = this.timeline.attr('data-zoom') || 1;
 			this.marker_density = this.timeline.attr('data-markerdensity') || 60;
@@ -18,6 +20,42 @@
 			this.layer_width = this.timeline.attr('data-layerwidth') || 200;
 			this.ruler_markers = parseInt(Math.round(this.zoom) * this.layer_width * this.marker_density);
 			this.initial_layer_width = this.layer_width;
+
+			var video = document.getElementById('preview-final');
+			var mediaSource = new MediaSource();    
+			video.src = window.URL.createObjectURL(mediaSource);
+
+			var queue = [];
+			function callback(e){
+
+			    video.pause();
+			    mediaSource.addSourceBuffer('video/webm; codecs="vorbis,vp8"');
+			    mediaSource.sourceBuffers[0].addEventListener('updateend', onBufferUpdated);
+			    var firstChunk = true;
+			    ss($.editor.socket).on("preview", function(data) {
+
+			    	// the data here needs to be revised!!!!
+			        var uIntArray = new Uint8Array(data);
+
+			        if (firstChunk) {
+			            mediaSource.sourceBuffers[0].appendBuffer(uIntArray);
+			            firstChunk = false;
+			        }
+
+			        queue.push(uIntArray);
+			    });
+
+			    var onBufferUpdated = function() {
+			        console.log('buffer is updated');
+			        if (queue.length) {
+			            mediaSource.sourceBuffers[0].appendBuffer(queue.shift());
+			        }
+			    };
+
+			}
+
+			mediaSource.addEventListener('sourceopen', callback, false);
+			mediaSource.addEventListener('webkitsourceopen', callback, false);
 
 			$( ".media" )
 			.draggable({ 
@@ -71,6 +109,12 @@
 				$.editor.renderVideo();
 			});	
 
+			$('#play').on('click', function(){
+				$.editor.renderVideo();
+			});	
+
+
+
 			this.startHotKeyListener();
 		},
 
@@ -106,6 +150,7 @@
 					e.css('left', left_percent + "%");
 					e.attr('data-start', new_start);
 					e.css('top', 0).detach().appendTo($this);
+					$.editor.updateState();
 				}
 			});
 			
@@ -229,10 +274,36 @@
 			return Boolean(this.pressed_keys[keys[key]]);
 		},
 
-		renderVideo: function () {
-			$form = $('#test-form');
+		getEditorState: function () {
 			var timeline_data = [];
-			$('.layer-media').each(function(i, e){
+			var $media = $('#timeline .layer-media');
+
+			for( var i = 0; i < $media.length; i++) {
+				$e = $($media[i]);
+				timeline_data.push({
+					'file': $e.attr('data-filepath'),
+					'start': 0,
+					'end': Number($e.attr('data-duration')),
+					'timeline_start': Number($e.attr('data-start')),
+					'timeline_layer': 0,
+					'volume': 1,
+					'top_left_x': 0,
+					'top_left_y': 0,
+					'bottom_right_x': 320,
+					'bottom_right_y': 180,
+					'has_video': true,
+					'has_audio': true
+				});
+			}
+
+			return {'clips' : timeline_data};
+		},
+
+		renderVideo: function () {
+			var timeline_data = [];
+			var $media = $('.layer-media');
+
+			$media.each(function(i, e){
 				$e = $(e);
 				timeline_data.push({
 					'file': $e.attr('data-filepath'),
@@ -243,8 +314,8 @@
 					'volume': 1,
 					'top_left_x': 0,
 					'top_left_y': 0,
-					'bottom_right_x': 1280,
-					'bottom_right_y': 720,
+					'bottom_right_x': 320,
+					'bottom_right_y': 180,
 					'has_video': true,
 					'has_audio': true
 				});
@@ -261,6 +332,17 @@
 					console.log(data);
 				});
 			});
+		},
+
+		previewVideo : function () {
+
+		},
+
+		updateState: function() {
+			var state = this.getEditorState();
+			this.socket.emit('update_editor_state', state);
+			// $video.attr('src', '/preview');
+			document.getElementById('preview-final').play();
 		}
 	}
 }( jQuery ));

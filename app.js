@@ -9,9 +9,15 @@ var passport = require('passport');
 var flash = require('connect-flash');
 var routes = require('./routes/index');
 var bb = require('express-busboy');
- 
+var session = require('express-session');
+var sharedsession = require("express-socket.io-session");
+var socketStream = require('socket.io-stream');
+
+var editor = require('./editor.js');
+
 var app = express();
 var http = require('http').Server(app);
+var io = require('socket.io')(http);
 
 //include models
 var User = require("./models/user").User;
@@ -31,10 +37,14 @@ db.once('open', function (callback) {
 });
 
 var configPassport = require('./config/passport'); // pass passport for configuration
-app.use(require('express-session')({ secret: 'keyboard cat', resave: true, saveUninitialized: true }));
+var sessionMiddleWare = session({ secret: 'keyboard cat', resave: true, saveUninitialized: true });
+
+app.use(sessionMiddleWare);
 app.use(passport.initialize());
-app.use(passport.session());	
+app.use(passport.session());
 app.use(flash());
+
+io.use(sharedsession(sessionMiddleWare));
 
 app.use(function(req, res, next){
     res.locals.success_messages = req.flash('success_messages');
@@ -77,6 +87,36 @@ app._router.stack.forEach(function(r){
 
 module.exports = app;
   
+io.on('connection', function(socket){
+  socket.on('update_editor_state', function(editor_state){
+    socket.handshake.session.editor_state = editor_state;
+    socket.handshake.session.save();
+    stream = socketStream.createStream();
+
+    var data = socket.handshake.session.editor_state;
+    if( data ){
+      if( socket.ffmpeg_preview ) {
+          socket.ffmpeg_preview.kill();
+      }
+
+      var ffmpeg_preview = editor.render(data).format('webm');
+
+      ffmpeg_preview.pipe(stream, {end:true});
+
+      socket.ffmpeg_preview = ffmpeg_preview;
+
+      socketStream(socket).emit('preview', stream);
+      console.log('emitting'); 
+    }
+    else {
+      console.log('No editor state');
+    }
+
+    
+  });
+
+});
+
 http.listen(3000, function(){
   console.log('listening on *:3000');
 });

@@ -18,27 +18,25 @@ router.get('/', function(req, res) {
 	}
 
 	Video.find({}, function (err, videos) {
-		console.log(videos);
 		var visible_videos = [];
 		for ( var i = 0; i < videos.length; i++ ) {
 			
 			if (!fs.existsSync(videos[i].filepath)){ 
 
 				// This causes a bug on upload and refresh!
-				(function(id){
-					videos[i].remove( function (err) {
-						if (err) {
-							console.log(err);
-						}
-						else {
-							console.log("Video was not found and was deleted from db: " + id);
-						}
-					});
-				})(videos[i]._id);
+				// (function(id){
+				// 	videos[i].remove( function (err) {
+				// 		if (err) {
+				// 			console.log(err);
+				// 		}
+				// 		else {
+				// 			console.log("Video was not found and was deleted from db: " + id);
+				// 		}
+				// 	});
+				// })(videos[i]._id);
 			}
 			else {
 				videos[i].filepath = videos[i].filepath.replace( 'public/', '' );
-				console.log(videos[i]);
 				visible_videos.push(videos[i]);
 			}
 		}
@@ -48,23 +46,10 @@ router.get('/', function(req, res) {
 		});
 	});;
 
-
-
-	// fs.readdir('public/videos', function(err, files){
-	// 	if ( err ) {
- //            console.log("Error reading files: ", err);
- //        } 
- //        else {
- //        	files.forEach(function(file){
- //        		videos.push({name: file});
- //        	});
- //        }
-
-	// });
 });
 
 router.post('/editor', function(req, res) {
-	var data = editor.render(req.body);
+	var data = editor.render(req.body).save(path.join(__dirname, '../public/videos', '/test-mest-2.mp4'));
 	res.send(data);
 });
 
@@ -94,8 +79,6 @@ router.post('/register', function (req, res) {
     }).then(function( user ){
 		passport.authenticate('local', function(err, user) {
 		    if (err || !user) {
-				console.log(err); 
-				console.log(user); 
 				return res.redirect('/login');
 		 	}
 	    	req.logIn(user, function(err) {
@@ -210,5 +193,38 @@ router.post('/upload', function(req, res) {
 	}
 	res.redirect('/');
 });
+
+/*
+router.get('/preview', function(req, res) {
+	res.contentType('webm');
+	var data = req.session.editor_state;
+	if( data ){
+		var ffmpeg_preview = editor.render(data).format('webm');
+		ffmpeg_preview.on('start', function(command){
+			console.log('PREVIEW');
+			console.log(req.session.ffmpeg_preview);
+
+			if( req.session.ffmpeg_preview ) {
+				if ( req.session.ffmpeg_preview.kill ) {
+					console.log('DIE DIE DIE!');
+					req.session.ffmpeg_preview.kill();
+				}
+				else {
+					console.log('==========='); 
+					console.log('abe ne6to ne e nared'); 
+					console.log(req.session.ffmpeg_preview.kill);
+				}
+			}
+		});
+
+		return ffmpeg_preview.pipe(res, {end:true});    
+	}
+	else {
+		console.log('No editor state');
+		return;
+	}
+
+});
+*/
 
 module.exports = router;
