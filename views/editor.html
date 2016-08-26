@@ -37,8 +37,37 @@
 </div>
 
 <div id="preview-area" class="ui-area">
-	<video id="preview-current" class="preview-video" src="" controls></video>
-	<video id="preview-final" class="preview-video" src="" controls></video>
+	<div class="preview-video" id="preview-current-area">
+		<video id="preview-current" src=""></video>
+		
+		<button disabled="true" id="preview-current-play">Play</button>
+		<button disabled="true" id="preview-current-pause">Pause</button>
+		<button disabled="true" id="preview-current-stop">Stop</button>
+		<button disabled="true" class="preview-current-zoom-button" data-amount="0.1" id="preview-current-zoom-in">+</button>
+		<button disabled="true" class="preview-current-zoom-button" data-amount="-0.1" id="preview-current-zoom-out">-</button>
+		<button id="preview-current-selection">Select Region</button>
+		<button id="preview-current-remove-selections">Clear Selection</button>
+		
+		<div class="timeline" data-disabled="true" data-zoom="1" data-markerdensity="0.5" data-duration="12" data-layerwidth="100" data-endtime="12">
+			<div class="layer"></div>
+		</div>
+		
+		<div style="padding: 10px;border: 1px solid black;margin: 10px">
+			WIP effects:
+
+			<button id="remove-unselected">Crop</button>
+			<button id="remove-selected">Remove Selected</button>
+			<button id="reverse">Reverse</button>
+			<button>Loop</button>
+			<button>Overlay</button>
+			<button>Circle</button>
+			<button>Text</button>
+			<button>Brightness</button>
+		</div>
+	</div>
+	<div class="preview-video">
+		<video id="preview-final" src=""></video>
+	</div>
 </div>
 
 <div id="timeline-area" class="ui-area">
@@ -51,9 +80,10 @@
 
 		<button id="render">RENDER</button>
 		<button id="play">Play</button>
+		<input type="text" id="preview_start" name="preview_start" />
 	</div>
-	<div id="timeline-holder" class="ui-area">
-		<div id="timeline" data-zoom="1" data-markerdensity="1.5" data-duration="600" data-layerwidth="200">
+	<div class="ui-area timeline-holder">
+		<div id="timeline" class="timeline" data-zoom="1" data-markerdensity="1.5" data-duration="600" data-endtime="600" data-layerwidth="200">
 			<div class="layer"></div>			
 		</div>
 	</div>

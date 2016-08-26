@@ -194,29 +194,19 @@ router.post('/upload', function(req, res) {
 	res.redirect('/');
 });
 
-/*
 router.get('/preview', function(req, res) {
 	res.contentType('webm');
 	var data = req.session.editor_state;
 	if( data ){
 		var ffmpeg_preview = editor.render(data).format('webm');
-		ffmpeg_preview.on('start', function(command){
-			console.log('PREVIEW');
-			console.log(req.session.ffmpeg_preview);
 
-			if( req.session.ffmpeg_preview ) {
-				if ( req.session.ffmpeg_preview.kill ) {
-					console.log('DIE DIE DIE!');
-					req.session.ffmpeg_preview.kill();
-				}
-				else {
-					console.log('==========='); 
-					console.log('abe ne6to ne e nared'); 
-					console.log(req.session.ffmpeg_preview.kill);
-				}
-			}
-		});
+		var start = req.param("preview_start");
 
+		if ( start && !isNaN(parseFloat(start)) && isFinite(start) ) {
+			ffmpeg_preview.seekOutput(start);
+		}
+
+		req.app.io.ffmpeg_preview = ffmpeg_preview;
 		return ffmpeg_preview.pipe(res, {end:true});    
 	}
 	else {
@@ -225,6 +215,5 @@ router.get('/preview', function(req, res) {
 	}
 
 });
-*/
 
 module.exports = router;

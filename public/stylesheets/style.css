@@ -54,6 +54,15 @@ body {
   margin-left: 1%;
 }
 
+.preview-video video {
+  width: 100%;
+}
+
+.preview-video .timeline {
+  margin-left: 0;
+  height: auto;
+}
+
 #media-library {
   max-height: 100%;
   overflow: auto;
@@ -97,7 +106,7 @@ body {
   padding: 5px;
 }
 
-#timeline-holder {
+.timeline-holder {
   height: 100%;
 }
 
@@ -107,14 +116,14 @@ body {
   height: 100%;
 }
 
-#timeline {
+.timeline {
   margin-left: 300px;
-  overflow-x: scroll;
+  overflow-x: auto;
   height: 100%;
   position: relative;
 }
 
-#timeline .layer {
+.timeline .layer {
   width: 2000px;
   height: 60px;
 
@@ -126,7 +135,7 @@ body {
   position: relative;
 }
 
-#timeline .layer:before {
+.timeline .layer:before {
   position: absolute;
   content: "";
   display: block;
@@ -215,4 +224,61 @@ body {
   -webkit-box-shadow: inset 0px 0px 5px 5px rgba(105,255,105,0.8);
   -moz-box-shadow: inset 0px 0px 5px 5px rgba(105,255,105,0.8);
   box-shadow: inset 0px 0px 5px 5px rgba(105,255,105,0.8);
+}
+
+.time-marker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  width: 10px;
+  height: 100%;
+  cursor: pointer;
+  opacity: 0.7;
+  margin-left: -5px;
+}
+
+.time-marker .line {
+  position: absolute;
+  top: 0;
+  left: 4px;
+  z-index: 100;
+  background: red;
+  width: 2px;
+  height: 100%;
+}
+
+.time-marker:after,
+.time-marker:before {
+  position: absolute;
+  display: block;
+  z-index: 100;
+  left: 0;
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+}
+
+.time-marker:after{
+  bottom: 0;
+  border-bottom: 5px solid red;
+}
+
+.time-marker:before{
+  top: 0;
+  border-top: 5px solid red;
+}
+
+.timeline-selection {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100px;
+  background: #7b9de8;
+  border-left: 1px solid #3b71ea;
+  border-right: 1px solid #3b71ea;
+  opacity: 0.4;
 }
