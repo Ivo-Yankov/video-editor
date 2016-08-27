@@ -6,6 +6,7 @@
 		timeline: "",
 		preview_timeline: "",
 		create_selection: false,
+		preview_video_interval: "",
 
 		init: function() {
 
@@ -27,9 +28,29 @@
 
 					video.pause();
 					$time_marker.stop();
-					document.getElementById('preview-current').currentTime = position_percent * end_time / 100;
+					document.getElementById('preview-current').currentTime = (position_percent * end_time / 100) + Number($timeline.attr('data-offset'));
 				},
 			} );
+
+			document.getElementById('preview-current').ontimeupdate = function( e ) {
+				var $timeline = $.editor.preview_timeline.timeline;
+				var timeline_offset = Number( $timeline.attr('data-offset') );
+				var timeline_end = Number( $timeline.attr('data-duration') ) + timeline_offset;
+
+				if ( timeline_end && this.currentTime > timeline_end ) {
+					console.log(this.currentTime);
+					console.log(timeline_end);
+
+					this.pause();
+					this.currentTime = timeline_end;
+					$.editor.preview_timeline.stopTimeMarker( this.currentTime );
+				}
+
+				if ( timeline_offset && this.currentTime < timeline_offset ) {
+					this.currentTime = timeline_offset;
+				}
+
+			};
 
 			$('#preview-current-selection').on('click', function(){
 				$.editor.create_selection = true;
@@ -77,6 +98,15 @@
 				$.editor.preview_timeline.stopTimeMarker(video.currentTime);
 			});
 
+			$('#remove-selected').on('click', function() {
+				$.editor.cropMedia( true );
+			});
+
+			$('#remove-unselected').on('click', function() {
+				$.editor.cropMedia( false );
+			});
+
+
 			$('#preview-current-stop').on('click', function() {
 				var video = document.getElementById('preview-current');
 				video.currentTime = 0;
@@ -90,17 +120,21 @@
 				snapTolerance: 10,
 				helper: function() {
 					$this = $(this);
-					var background = $this.find('img').attr('src');
-					var duration = $this.attr('data-duration');
-					var filepath = $this.attr('data-filepath');
-					return $("<div class='layer-media' data-filepath='" + filepath + "' data-duration='" + duration + "' style='background-image:url(" + background + ")'></div>");
+					args = {
+						background : $this.find('img').attr('src'),
+						duration : $this.attr('data-duration'),
+						filepath : $this.attr('data-filepath'),
+						offset : 0
+					}
+
+					return $.editor.createLayerMedia( args );
 				},
 				stop: function( event, ui ) {
 					ui.helper.remove();
 				}
 			})
 			.on('click', function() {
-				$('.media').not(this).removeClass('selected');
+				$('.selected').not(this).removeClass('selected');
 				$this = $(this);
 
 				var $preview_area = $('#preview-current-area');
@@ -118,6 +152,7 @@
 				$timeline.attr('data-disabled', 'true');
 				$timeline.attr('data-duration', '12');
 				$timeline.attr('data-endtime', '12');
+				$timeline.attr('data-offset', '0');
 
 				$timeline.attr('data-zoom', '1');
 				$.editor.preview_timeline.reinit();
@@ -138,9 +173,63 @@
 				$.editor.renderVideo();
 			});	
 
-
-
 			this.startHotKeyListener();
+		},
+
+		createLayerMedia : function ( args ) {
+			var data = "";
+			for (var key in args) {
+				if (args.hasOwnProperty(key) && key != 'background' && key != 'style') {
+					data += "data-" + key + "='" + args[key] + "' ";
+				}
+			}
+
+			var style = "";
+			if ( args.style ) {
+				style += args.style;
+			}
+
+			if ( args.background ) {
+				style += 'background-image:url("' + args.background + '")';
+			}
+
+			var $media = $("<div class='layer-media' " + data + " style='" + style + "'></div>");
+
+			return $media;
+		},
+
+		mediaOnClickHandler : function( e ){
+			$this = $(e.target);
+			if( ! $.editor.isKeyPressed('shift') ) {
+				$('.selected').not(e.target).removeClass('selected');
+
+				var $preview_area = $('#preview-current-area');
+				var $timeline = $preview_area.find('.timeline');
+
+				if ($this.hasClass('selected')) {
+					$('#preview-current').attr('src', '');
+					$preview_area.find('button').attr('disabled', 'true');
+					$timeline.attr('data-disabled', 'true');
+					$timeline.attr('data-duration', '12');
+					$timeline.attr('data-endtime', '12');
+					$timeline.attr('data-offset', '0');
+					$(this).removeClass('selected');
+				}
+				else {
+					$('#preview-current').attr('src', $this.attr('data-filepath'));
+					$preview_area.find('button').removeAttr('disabled');
+					$timeline.attr('data-disabled', 'false');
+					$timeline.attr('data-duration', $this.attr('data-duration'));
+					$timeline.attr('data-endtime', $this.attr('data-duration'));
+					$timeline.attr('data-offset', $this.attr('data-offset'));
+					document.getElementById('preview-current').currentTime = $this.attr('data-offset');
+					$(this).addClass('selected');
+				}
+
+				$.editor.preview_timeline.reinit();
+
+			}
+			
 		},
 
 		initLayerMedia : function ( media ) {
@@ -148,38 +237,6 @@
 				media = $('.layer-media');
 			}
 
-			media.draggable({ 
-				snap: ".layer, .layer:before, .layer-media",
-				snapTolerance: 10,
-				stop: function( event, ui ) {
-				},
-			    start: function(event, ui) {
-			        selectedObjs = $('.layer-media.selected');
-			    },
-			    drag: function(event, ui) {
-			    	/*
-					// TODO move selected media items at once
-
-			        var currentLoc = $(this).position();
-			        var orig = ui.originalPosition;
-
-			        var offsetLeft = currentLoc.left-orig.left;
-			        var offsetTop = currentLoc.top-orig.top;
-			        
-					selectedObjs.each(function(){
-				        $this = $(this);
-				        var pos = $this.position();
-
-				        var l = $this.position().clientLeft;
-				        var t = $this.position().clientTop;
-
-				        $this.css('left', l+offsetLeft);
-				        $this.css('top', t+offsetTop);
-				    })
-					*/
-			    }  
-			});
-			
 			media.each(function(i,e) {
 				$e = $(e);
 				var start = Number($e.attr('data-start'));
@@ -187,33 +244,22 @@
 				var new_left = ( start / $.editor.timeline.duration * 100 );
 				$e.css('left', new_left + "%" );
 				$e.css('width', ( media_duration / $.editor.timeline.duration * 100 ) + "%" ); 
-			});
 
-			media.on('click', function(e){
-				$this = $(this);
-				if( ! $.editor.isKeyPressed('shift') ) {
-					$('.layer-media.selected').not(this).removeClass('selected');
-					//huihuihiu
-					var $preview_area = $('#preview-current-area');
-					var $timeline = $preview_area.find('.timeline');
-
-					if ($this.hasClass('selected')) {
-						$('#preview-current').attr('src', '');
-						$preview_area.find('button').attr('disabled', 'true');
-						$timeline.attr('data-disabled', 'true');
-						$timeline.attr('data-duration', '12');
-						$timeline.attr('data-endtime', '12');
-					}
-					else {
-						$('#preview-current').attr('src', $this.attr('data-filepath'));
-						$preview_area.find('button').removeAttr('disabled');
-						$timeline.attr('data-disabled', 'false');
-						$timeline.attr('data-duration', $this.attr('data-duration'));
-						$timeline.attr('data-endtime', $this.attr('data-duration'));
-					}
-
+				if ($e.attr('data-initiated') !== 'true') {
+					$e.on('click', $.editor.mediaOnClickHandler);
+					
+					$e.draggable({ 
+						snap: ".layer, .layer:before, .layer-media",
+						snapTolerance: 10,
+						stop: function( event, ui ) {
+						},
+					    start: function(event, ui) {
+					        selectedObjs = $('.layer-media.selected');
+					    } 
+					});
 				}
-				$(this).toggleClass('selected');
+
+				$e.attr('data-initiated', 'true');
 			});
 		},
 
@@ -244,9 +290,9 @@
 				$e = $($media[i]);
 				timeline_data.push({
 					'file': $e.attr('data-filepath'),
-					'start': 0,
-					'end': Number($e.attr('data-duration')),
-					'timeline_start': Number($e.attr('data-start')),
+					'start': Number($e.attr('data-start')),
+					'end': Number($e.attr('data-start')) + Number($e.attr('data-duration')),
+					'offset': Number($e.attr('data-offset')),
 					'timeline_layer': 0,
 					'volume': 1,
 					'top_left_x': 0,
@@ -311,7 +357,95 @@
 				video.src += "?preview_start=" + preview_start;				
 			}
 
-			// video.play();
+			video.play();
+		},
+
+		cropMedia: function( delete_selected ) {
+			var $selected = $('.layer-media.selected');
+			var selection_data = $.editor.preview_timeline.getSelectionData();
+
+			if (selection_data.length) {
+				// Limit to 1 selection only
+				selection_data = selection_data[0];
+			}
+
+			var media_duration = Number($selected.attr('data-duration'));
+
+			var media_start = Number($selected.attr('data-start'));
+			var media_end = media_start + Number($selected.attr('data-duration'));
+
+			var media_arr = [];
+
+			if ( selection_data.end > media_duration ) {
+				selection_data.end = media_duration;
+			}
+
+			if ( selection_data.start > media_duration ) {
+				selection_data.start = media_duration;
+			}
+
+			if ( selection_data.start < 0 ) {
+				selection_data.start = 0;
+			}
+
+			if ( selection_data.end < 0 ) {
+				selection_data.end = 0;
+			}
+
+			var media_offset = Number($selected.attr('data-offset'));			
+
+			if ( delete_selected ) {
+				if ( selection_data.start > 0 ) {
+					media_arr.push(
+						$.editor.createLayerMedia({
+							style : $selected.attr('style'),
+							filepath : $selected.attr('data-filepath'),
+							start : media_start,
+							offset : media_offset,
+							duration : selection_data.start,
+						})
+					);
+				}
+
+				if ( selection_data.end < media_duration ) {
+					media_arr.push(
+						$.editor.createLayerMedia({
+							style : $selected.attr('style'),
+							filepath : $selected.attr('data-filepath'),
+							start : media_start + selection_data.start,
+							duration : media_duration - selection_data.end,
+							offset: media_offset + selection_data.end
+						})
+					);
+				}
+			}
+			else {
+				media_arr.push(
+					$.editor.createLayerMedia({
+						style : $selected.attr('style'),
+						filepath : $selected.attr('data-filepath'),
+						start : media_start,
+						duration : selection_data.end - selection_data.start,
+						offset: media_offset + selection_data.start
+					})
+				);
+			}
+
+			var $layer = $selected.closest('.layer');
+
+			if ( media_arr.length ) {
+
+				for ( var i = 0; i < media_arr.length; i++ ) {
+					$layer.append(media_arr[i]);
+					$.editor.initLayerMedia(media_arr[i]);
+				}
+
+				media_arr[0].trigger('click');
+
+				$selected.remove();
+			}
+
+			$('#preview-current-area .timeline-selection').remove();
 		}
 	}
 
@@ -444,9 +578,8 @@
 		this.animateTimeMarker = function() {
 			var $timeline = $(this.timeline);
 			var $time_marker = $timeline.find('.time-marker');
-
-			var end_time = $timeline.attr('data-endtime');
-			var duration = $timeline.attr('data-duration');
+			var duration = Number( $timeline.attr('data-duration') );
+			var end_time = Number( $timeline.attr('data-endtime') );
 			var position_left = Number($time_marker.css('left').replace('px', ''));
 			var layer_width = Number($timeline.find('.layer').width());
 			var current_time = position_left * duration / layer_width;
@@ -461,6 +594,12 @@
 		this.stopTimeMarker = function( current_time ) {
 			var $timeline = $(this.timeline);
 			var $time_marker = $timeline.find('.time-marker');
+			var offset = Number( $timeline.attr('data-offset') );
+			current_time -= offset;
+
+			if ( current_time < 0 ) {
+				current_time = 0;
+			}
 
 			var end_time = Number($timeline.attr('data-endtime')) || 0;
 			var duration = Number($timeline.attr('data-duration')) || 1;

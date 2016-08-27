@@ -38,9 +38,8 @@ module.exports = {
 			var clip = clips[i];
 			clip.end = Number(clip.end);
 			clip.start = Number(clip.start);
-			clip.timeline_start = Number(clip.timeline_start);
 
-			var timeline_end = clip.end - clip.start + clip.timeline_start;
+			var timeline_end = clip.end;
 			if ( timeline_end > duration ) {
 				duration = timeline_end;
 			}
@@ -53,15 +52,15 @@ module.exports = {
 			};
 
 			var audio_options = {
-				start: clip.timeline_start,
-				end: clip.timeline_start + clip.end,
+				start: clip.start,
+				end: clip.end,
 				filters: []
 			};
 
-			var offset = clip.timeline_start - clip.start;
+			var offset = clip.offset;
 			if ( clip.has_video ) {
 				// Create the video declaration step filters
- 				video_options.declaration.push( 'setpts=PTS+' + offset + '/TB' );
+ 				video_options.declaration.push( 'setpts=PTS+' + (clip.start - offset) + '/TB' );
 
 	 			var width = clip.bottom_right_x - clip.top_left_x;
 	 			var height = clip.bottom_right_y - clip.top_left_y;
@@ -69,7 +68,7 @@ module.exports = {
 	 				video_options.declaration.push( 'scale=' + width + 'x' + height );
 	 			// }
 
-	 			video_options.declaration.push( 'trim=start=' + clip.start + ':end=' + (offset + clip.end) );
+	 			video_options.declaration.push( 'trim=start=' + clip.start + ':end=' + (clip.end + offset) );
 
 				// Create the video overlay step filter
 				var overlay_filter = 'overlay=eof_action=pass';
@@ -88,9 +87,9 @@ module.exports = {
 
 			if ( clip.has_audio ) {
 				// Create the audio filters
- 				audio_options.filters.push( 'asetpts=PTS+' + offset + '/TB' );
+ 				audio_options.filters.push( 'asetpts=PTS+' + (clip.start - offset) + '/TB' );
 
-				audio_options.filters.push( 'atrim=start=' + (clip.start + offset) + ':end=' + (clip.end + offset) );
+				audio_options.filters.push( 'atrim=start=' + clip.start + ':end=' + (clip.end + offset) );
 
 				if ( clip.volume || clip.volume === 0 ) {
 					audio_options.filters.push( 'volume=' + clip.volume );
