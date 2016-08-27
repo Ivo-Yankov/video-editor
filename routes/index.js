@@ -201,7 +201,7 @@ router.get('/preview', function(req, res) {
 		var ffmpeg_preview = editor.render(data).format('webm');
 
 		var start = req.param("preview_start");
-
+		console.log('start: ' + start);
 		if ( start && !isNaN(parseFloat(start)) && isFinite(start) ) {
 			ffmpeg_preview.seekOutput(start);
 		}

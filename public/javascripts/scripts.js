@@ -13,7 +13,26 @@
 			this.socket = io();
 			this.timeline = new $.timeline( $('#timeline'), {
 				zoom_button: $('.zoom-button'),
-				droppable: true
+				droppable: true,
+				time_marker_start: function(event, ui) {
+					var $timeline = $($.editor.timeline.timeline);
+					var $time_marker = $timeline.find('.time-marker');
+					var video = document.getElementById('preview-final');
+					if ( !video.paused && !video.ended ) {
+						video.pause();
+					}
+					$time_marker.stop();
+				},
+				time_marker_stop: function(event, ui) {
+					var $timeline = $($.editor.timeline.timeline);
+					var layer_width = Number($timeline.find('.layer').width());
+					var end_time = $timeline.attr('data-endtime');
+					var position_percent = ui.position.left * 100 / layer_width;
+					var video = document.getElementById('preview-final');
+
+					document.getElementById('preview-final').timelineTime = position_percent * end_time / 100;
+					$.editor.updateState();
+				},
 			} );
 
 			this.preview_timeline = $.timeline( $('#preview-area .timeline'), {
@@ -38,9 +57,6 @@
 				var timeline_end = Number( $timeline.attr('data-duration') ) + timeline_offset;
 
 				if ( timeline_end && this.currentTime > timeline_end ) {
-					console.log(this.currentTime);
-					console.log(timeline_end);
-
 					this.pause();
 					this.currentTime = timeline_end;
 					$.editor.preview_timeline.stopTimeMarker( this.currentTime );
@@ -52,6 +68,18 @@
 
 			};
 
+			var final_video = document.getElementById('preview-final');
+			final_video.timelineTime = 0;
+			final_video.prevTime = 0
+
+			final_video.ontimeupdate = function( e ) {
+				var time_delta = (this.currentTime - this.prevTime) || 0;
+				this.timelineTime += time_delta;
+				$.editor.timeline.stopTimeMarker ( this.timelineTime );
+				this.prevTime = this.currentTime;
+			};
+
+
 			$('#preview-current-selection').on('click', function(){
 				$.editor.create_selection = true;
 			});
@@ -60,7 +88,7 @@
 				$('#preview-current-area .timeline-selection').remove();
 			});
 
-			this.preview_timeline.timeline.on('mousedown', function(e){
+			this.preview_timeline.timeline.on('click', function(e){
 				if ($.editor.create_selection === true) {
 			        var posX = $(this).offset().left;
 					var $timeline = $(this);
@@ -83,7 +111,25 @@
 				$.editor.create_selection = false;
 			});
 
-			this.preview_timeline.timeline.on('mouseup', function(){
+			$('#preview-final-play').on('click', function() {
+				var video = document.getElementById('preview-final');
+				video.play();
+				$.editor.timeline.animateTimeMarker();
+			});
+
+			$('#preview-final-pause').on('click', function() {
+				var video = document.getElementById('preview-final');
+				video.pause();
+				$.editor.timeline.stopTimeMarker(video.timelineTime);
+			});
+
+			$('#preview-final-stop').on('click', function() {
+				var video = document.getElementById('preview-final');
+				video.timelineTime = 0;
+				video.prevTime = 0;
+				video.pause();
+				$.editor.timeline.stopTimeMarker(video.timelineTime);
+				$.editor.updateState();
 			});
 
 			$('#preview-current-play').on('click', function() {
@@ -98,6 +144,13 @@
 				$.editor.preview_timeline.stopTimeMarker(video.currentTime);
 			});
 
+			$('#preview-current-stop').on('click', function() {
+				var video = document.getElementById('preview-current');
+				video.currentTime = 0;
+				video.pause();
+				$.editor.preview_timeline.stopTimeMarker(video.currentTime);
+			});
+
 			$('#remove-selected').on('click', function() {
 				$.editor.cropMedia( true );
 			});
@@ -106,13 +159,11 @@
 				$.editor.cropMedia( false );
 			});
 
-
-			$('#preview-current-stop').on('click', function() {
-				var video = document.getElementById('preview-current');
-				video.currentTime = 0;
-				video.pause();
-				$.editor.preview_timeline.stopTimeMarker(video.currentTime);
+			$('#remove-media').on('click', function() {
+				$('.layer-media.selected').remove();
+				$.editor.updateState();
 			});
+
 
 			$( ".media" )
 			.draggable({ 
@@ -348,16 +399,15 @@
 
 		updateState: function() {
 			var state = this.getEditorState();
+			console.log(state);
 			this.socket.emit('update_editor_state', state);
 			var video = document.getElementById('preview-final');
+			video.pause();
+			preview_start = document.getElementById('preview-final').timelineTime;
 			video.src = "/preview";
-
-			preview_start = $('#preview_start').val();
 			if ( preview_start ) {
-				video.src += "?preview_start=" + preview_start;				
+				video.src += "?preview_start=" + preview_start;
 			}
-
-			video.play();
 		},
 
 		cropMedia: function( delete_selected ) {
@@ -446,6 +496,7 @@
 			}
 
 			$('#preview-current-area .timeline-selection').remove();
+			$.editor.updateState();
 		}
 	}
 
@@ -501,6 +552,15 @@
 					if (this.options && this.options.time_marker_drag) {
 						args.drag = this.options.time_marker_drag;
 					}
+					
+					if (this.options && this.options.time_marker_start) {
+						args.start = this.options.time_marker_start;
+					}
+
+					if (this.options && this.options.time_marker_stop) {
+						args.stop = this.options.time_marker_stop;
+					}
+
 
 					time_marker.draggable(args);
 				}
@@ -594,7 +654,7 @@
 		this.stopTimeMarker = function( current_time ) {
 			var $timeline = $(this.timeline);
 			var $time_marker = $timeline.find('.time-marker');
-			var offset = Number( $timeline.attr('data-offset') );
+			var offset = Number( $timeline.attr('data-offset') ) || 0;
 			current_time -= offset;
 
 			if ( current_time < 0 ) {
@@ -640,7 +700,9 @@
 
 		this.options = {
 			droppable : args.droppable || false,
-			time_marker_drag: args.time_marker_drag
+			time_marker_drag: args.time_marker_drag,
+			time_marker_start: args.time_marker_start,
+			time_marker_stop: args.time_marker_stop
 		}
 
 		this.reinit();

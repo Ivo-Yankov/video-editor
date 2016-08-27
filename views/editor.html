@@ -53,20 +53,23 @@
 		</div>
 		
 		<div style="padding: 10px;border: 1px solid black;margin: 10px">
-			WIP effects: 
-			
+			Done effects:
+
 			<button id="remove-selected">Remove Selected</button>
 			<button id="remove-unselected">Crop</button>
 		</div>
 		<div style="padding: 10px;border: 1px solid black;margin: 10px">
+			WIP effects: 
+			<button>Brightness</button>
+			<button id="reverse">Reverse</button>
+		</div>
+		<div style="padding: 10px;border: 1px solid black;margin: 10px">
 			TODO effects:
 
-			<button id="reverse">Reverse</button>
 			<button>Loop</button>
 			<button>Overlay</button>
 			<button>Circle</button>
 			<button>Text</button>
-			<button>Brightness</button>
 		</div>
 	</div>
 	<div class="preview-video">
@@ -84,7 +87,11 @@
 
 		<button id="render">RENDER</button>
 		<button id="play">Play</button>
-		<input type="text" id="preview_start" name="preview_start" />
+
+		<button id="preview-final-play">Play</button>
+		<button id="preview-final-pause">Pause</button>
+		<button id="preview-final-stop">Stop</button>
+		<button id="remove-media">Remove Media</button>
 	</div>
 	<div class="ui-area timeline-holder">
 		<div id="timeline" class="timeline" data-zoom="1" data-markerdensity="1.5" data-duration="600" data-endtime="600" data-layerwidth="200">

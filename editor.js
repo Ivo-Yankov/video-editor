@@ -156,8 +156,8 @@ module.exports = {
 
 
 		//Audio step
-		var amix_filter = "";
-		var amix_count = 0;
+		var amerge_filter = "";
+		var amerge_count = 0;
 
 		for ( var i = 0; i < this.streams.audio.length; i++ ) {
 			filter = "";
@@ -184,6 +184,12 @@ module.exports = {
 				var audio_stream_name = this.streamNameToString( this.streams.last_audio_name ); 
 
 				filter += audio_stream_name;
+				
+				if ( ! ( stream.options.start || stream.options.end < duration ) ) {
+					amerge_count++;
+					amerge_filter += this.streamNameToString( this.streams.last_audio_name );
+				}
+
 				this.incrementAudioStreamName();
 
 				this.addFilter( filter );
@@ -201,24 +207,23 @@ module.exports = {
 					concat_count++;			
 				}
 
-				if ( concat_filter_start || concat_filter_end ) {
+				if ( stream.options.start || stream.options.end < duration ) {
 					var concat_filter = concat_filter_start + audio_stream_name + concat_filter_end;
 					concat_filter += "concat=n=" + concat_count + ":v=0:a=1";
 					concat_filter += this.streamNameToString( this.streams.last_audio_name );
 					this.addFilter( concat_filter );
+					amerge_count++;
+					amerge_filter += this.streamNameToString( this.streams.last_audio_name );
+					this.incrementAudioStreamName();
 				}
-
-				amix_count++;
-				amix_filter += this.streamNameToString( this.streams.last_audio_name );
-				// this.incrementAudioStreamName();
 			}
 		}
 
-		if ( amix_count > 1 ) {
+		if ( amerge_count > 1 ) {
 			this.incrementAudioStreamName();
-			amix_filter += "amerge=inputs=" + amix_count;
-			amix_filter += this.streamNameToString( this.streams.last_audio_name );
-			this.addFilter( amix_filter );
+			amerge_filter += "amerge=inputs=" + amerge_count;
+			amerge_filter += this.streamNameToString( this.streams.last_audio_name );
+			this.addFilter( amerge_filter );
 		}
 		else if( !concat_filter_start && !concat_filter_end ) {
 			this.decrementAudioStreamName();
@@ -229,8 +234,7 @@ module.exports = {
 		this.ffmpeg.addOption('-map', this.streamNameToString( this.streams.last_video_name ) );
 		this.ffmpeg.addOption('-map', this.streamNameToString( this.streams.last_audio_name ) );
 		this.ffmpeg.addOption('-t', duration );
-		this.ffmpeg.addOption('-ac', amix_count );
-		// this.ffmpeg.addOption('-c:a', 'libfdk_aac' );
+		this.ffmpeg.addOption('-ac', 2 );
 		this.ffmpeg.addOption('-b:a', '48k' );
 
 		return this.ffmpeg;
