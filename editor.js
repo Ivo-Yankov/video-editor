@@ -18,11 +18,23 @@ module.exports = {
 
 	render: function (data) {
 		var clips = data.clips;
+
+		console.log(clips);
 		var resolution_width = "320";
 		var resolution_height = "180";
 		var resolution = resolution_width + "x" + resolution_height;
 		var background = "black";
 		var uploads_folder = '/public/';
+
+		var eq_filters = {
+			'contrast'		: 1,
+			'brightness'	: 0,
+			'saturation'	: 1,
+			'gamma'			: 1,
+			'gamma_r'		: 1,
+			'gamma_g'		: 1,
+			'gamma_b'		: 1
+		};
 
 		this.init();
 
@@ -69,6 +81,19 @@ module.exports = {
 	 			// }
 
 	 			video_options.declaration.push( 'trim=start=' + clip.start + ':end=' + (clip.end + offset) );
+
+	 			if( clip.filters ) {
+	 				var clip_eq_filters = [];
+	 				for( filter in clip.filters ) {
+	 					if (clip.filters.hasOwnProperty(filter) && eq_filters.hasOwnProperty(filter) ) {
+ 							clip_eq_filters.push(filter + "=" + clip.filters[filter]);
+	 					}
+	 				}
+
+	 				if ( clip_eq_filters.length ) {
+	 					video_options.declaration.push( "eq=" + clip_eq_filters.join(':') );
+	 				}
+	 			}
 
 				// Create the video overlay step filter
 				var overlay_filter = 'overlay=eof_action=pass';

@@ -2,7 +2,6 @@
 	$.editor =  {
 		pressed_keys: [],
 		socket: "",
-		stream_socket : "",
 		timeline: "",
 		preview_timeline: "",
 		create_selection: false,
@@ -52,20 +51,27 @@
 			} );
 
 			document.getElementById('preview-current').ontimeupdate = function( e ) {
-				var $timeline = $.editor.preview_timeline.timeline;
-				var timeline_offset = Number( $timeline.attr('data-offset') );
-				var timeline_end = Number( $timeline.attr('data-duration') ) + timeline_offset;
-
-				if ( timeline_end && this.currentTime > timeline_end ) {
-					this.pause();
-					this.currentTime = timeline_end;
-					$.editor.preview_timeline.stopTimeMarker( this.currentTime );
+				if ( this.stream ) {
+					var time_delta = (this.currentTime - this.prevTime) || 0;
+					this.timelineTime += time_delta;
+					$.editor.preview_timeline.stopTimeMarker ( this.timelineTime );
+					this.prevTime = this.currentTime;
 				}
+				else {
+					var $timeline = $.editor.preview_timeline.timeline;
+					var timeline_offset = Number( $timeline.attr('data-offset') );
+					var timeline_end = Number( $timeline.attr('data-duration') ) + timeline_offset;
 
-				if ( timeline_offset && this.currentTime < timeline_offset ) {
-					this.currentTime = timeline_offset;
+					if ( timeline_end && this.currentTime > timeline_end ) {
+						this.pause();
+						this.currentTime = timeline_end;
+						$.editor.preview_timeline.stopTimeMarker( this.currentTime );
+					}
+
+					if ( timeline_offset && this.currentTime < timeline_offset ) {
+						this.currentTime = timeline_offset;
+					}
 				}
-
 			};
 
 			var final_video = document.getElementById('preview-final');
@@ -148,7 +154,13 @@
 				var video = document.getElementById('preview-current');
 				video.currentTime = 0;
 				video.pause();
-				$.editor.preview_timeline.stopTimeMarker(video.currentTime);
+				$.editor.preview_timeline.stopTimeMarker( 0 );
+				if ( video.stream ) {
+					video.prevTime = 0;
+					video.timelineTime = 0;
+					$.editor.updateState();
+				}
+
 			});
 
 			$('#remove-selected').on('click', function() {
@@ -164,6 +176,15 @@
 				$.editor.updateState();
 			});
 
+			$('.set-eq-filter').on('click', function() {
+				var $selected_media = $('.layer-media.selected');
+				var $this = $(this);
+				var filter = $this.attr('data-filter');
+				var value = $this.siblings('input').val();
+				$.editor.preview_timeline.setTimelineMode( true, document.getElementById('preview-current') );
+				$.editor.setFilter( $selected_media, filter, value );
+				$.editor.updateState ( $selected_media );
+			});
 
 			$( ".media" )
 			.draggable({ 
@@ -218,7 +239,7 @@
 
 			$('#render').on('click', function(){
 				$.editor.renderVideo();
-			});	
+			});
 
 			$('#play').on('click', function(){
 				$.editor.renderVideo();
@@ -275,6 +296,13 @@
 					$timeline.attr('data-offset', $this.attr('data-offset'));
 					document.getElementById('preview-current').currentTime = $this.attr('data-offset');
 					$(this).addClass('selected');
+
+					if ( $this.attr('data-filters') ) {
+						$.editor.preview_timeline.setTimelineMode ( true, document.getElementById('preview-current') );
+					}
+					else {
+						$.editor.preview_timeline.setTimelineMode ( false, document.getElementById('preview-current') );	
+					}
 				}
 
 				$.editor.preview_timeline.reinit();
@@ -333,16 +361,36 @@
 			return Boolean(this.pressed_keys[keys[key]]);
 		},
 
-		getEditorState: function () {
+		getEditorState: function ( single_media ) {
 			var timeline_data = [];
-			var $media = $('#timeline .layer-media');
+			var start;
+
+			if ( !single_media ) {
+				var $media = $('#timeline .layer-media');
+			}
+			else {
+				$media = single_media;
+			}
 
 			for( var i = 0; i < $media.length; i++) {
 				$e = $($media[i]);
+
+				if ( single_media ) {
+					start = 0;
+				}
+				else {
+					start = Number($e.attr('data-start'));
+				}
+
+				var filters = $e.attr('data-filters');
+				if (filters) {
+					filters = JSON.parse(filters);
+				}
+
 				timeline_data.push({
 					'file': $e.attr('data-filepath'),
-					'start': Number($e.attr('data-start')),
-					'end': Number($e.attr('data-start')) + Number($e.attr('data-duration')),
+					'start': start,
+					'end': start + Number($e.attr('data-duration')),
 					'offset': Number($e.attr('data-offset')),
 					'timeline_layer': 0,
 					'volume': 1,
@@ -351,7 +399,8 @@
 					'bottom_right_x': 320,
 					'bottom_right_y': 180,
 					'has_video': true,
-					'has_audio': true
+					'has_audio': true,
+					'filters' : filters
 				});
 			}
 
@@ -393,21 +442,17 @@
 			});
 		},
 
-		previewVideo : function () {
-
-		},
-
-		updateState: function() {
-			var state = this.getEditorState();
+		updateState: function( single_media ) {
+			var state = this.getEditorState( single_media );
 			console.log(state);
 			this.socket.emit('update_editor_state', state);
-			var video = document.getElementById('preview-final');
-			video.pause();
-			preview_start = document.getElementById('preview-final').timelineTime;
-			video.src = "/preview";
-			if ( preview_start ) {
-				video.src += "?preview_start=" + preview_start;
-			}
+			// var video = document.getElementById('preview-final');
+			// video.pause();
+			// preview_start = document.getElementById('preview-final').timelineTime;
+			// video.src = "/preview";
+			// if ( preview_start ) {
+			// 	video.src += "?preview_start=" + preview_start;
+			// }
 		},
 
 		cropMedia: function( delete_selected ) {
@@ -497,6 +542,22 @@
 
 			$('#preview-current-area .timeline-selection').remove();
 			$.editor.updateState();
+		},
+
+		setFilter : function( $media, filter, value ) {
+			var filters = $media.attr('data-filters');
+			if ( filters ) {
+				filters = JSON.parse(filters);
+				filters[filter] = value;
+			}
+			else {
+				filters = {};
+				filters[filter] = value;
+			}
+			
+			filters = JSON.stringify(filters);
+
+			$media.attr('data-filters', filters);
 		}
 	}
 
@@ -691,6 +752,18 @@
 			}
 
 			return selections_data;
+		}
+
+		this.setTimelineMode = function ( stream, video ) {
+			video.stream = stream;
+			video.timelineTime = 0;
+			video.currentTime = 0;
+			video.prevTime = 0;
+			video.pause();
+			this.stopTimeMarker( 0 );
+			if ( stream ) {
+				video.src = "/preview";
+			}
 		}
 
 		this.timeline = timeline;

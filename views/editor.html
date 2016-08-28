@@ -8,7 +8,6 @@
 	<script type="text/javascript" src="javascripts/jquery-3.1.0.min.js"></script>
 	<script type="text/javascript" src="javascripts/jquery-ui.min.js"></script>
 	<script type="text/javascript" src="javascripts/socket.io.js"></script>
-	<script type="text/javascript" src="javascripts/socket.io-stream.js"></script>
 	<script type="text/javascript" src="javascripts/scripts.js"></script>
 </head>
 <body>
@@ -54,19 +53,56 @@
 		
 		<div style="padding: 10px;border: 1px solid black;margin: 10px">
 			Done effects:
+			<div>
+				<button id="remove-selected">Remove Selected</button>
+				<button id="remove-unselected">Crop</button>
+			</div>
 
-			<button id="remove-selected">Remove Selected</button>
-			<button id="remove-unselected">Crop</button>
+			<div>
+				<input type="text" id="contrast-value" value="1"/>
+				<button class="set-eq-filter" data-filter="contrast" id="set-contrast">contrast</button>
+				-2.0 to 2.0
+			</div>
+			<div>
+				<input type="text" id="brightness-value" value="0"/>
+				<button class="set-eq-filter" data-filter="brightness" id="set-brightness">Brightness</button>
+				-1.0 to 1.0
+			</div>
+			<div>
+				<input type="text" id="saturation-value" value="1" />
+				<button class="set-eq-filter" data-filter="saturation" id="set-saturation">saturation</button>
+				0.0 to 3.0
+			</div>
+			<div>
+				<input type="text" id="gamma-value" value="1" />
+				<button class="set-eq-filter" data-filter="gamma" id="set-gamma">gamma</button>
+				0.1 to 10.0
+			</div>
+			<div>
+				<input type="text" id="gamma_r-value" value="1" />
+				<button class="set-eq-filter" data-filter="gamma_r" id="set-gamma_r">gamma_r</button>
+				0.1 to 10.0
+			</div>
+			<div>
+				<input type="text" id="gamma_g-value" value="1" />
+				<button class="set-eq-filter" data-filter="gamma_g" id="set-gamma_g">gamma_g</button>
+				0.1 to 10.0
+			</div>
+			<div>
+				<input type="text" id="gamma_b-value" value="1" />
+				<button class="set-eq-filter" data-filter="gamma_b" id="set-gamma_b">gamma_b</button>
+				0.1 to 10.0
+			</div>
 		</div>
 		<div style="padding: 10px;border: 1px solid black;margin: 10px">
 			WIP effects: 
-			<button>Brightness</button>
+
 			<button id="reverse">Reverse</button>
 		</div>
 		<div style="padding: 10px;border: 1px solid black;margin: 10px">
 			TODO effects:
 
-			<button>Loop</button>
+			<button>Copy Media</button>
 			<button>Overlay</button>
 			<button>Circle</button>
 			<button>Text</button>
