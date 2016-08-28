@@ -186,6 +186,15 @@
 				$.editor.updateState ( $selected_media );
 			});
 
+			$('#reverse').on('click', function() {
+				var $selected_media = $('.layer-media.selected');
+				
+				var value = $('#reverse-checkbox').is(':checked');
+				$.editor.preview_timeline.setTimelineMode( true, document.getElementById('preview-current') );
+				$.editor.setFilter( $selected_media, 'reverse', value );
+				$.editor.updateState ( $selected_media );				
+			});
+
 			$( ".media" )
 			.draggable({ 
 				snap: ".layer, .layer:before, .layer-media",

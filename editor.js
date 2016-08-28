@@ -93,6 +93,10 @@ module.exports = {
 	 				if ( clip_eq_filters.length ) {
 	 					video_options.declaration.push( "eq=" + clip_eq_filters.join(':') );
 	 				}
+
+	 				if ( clip.filters.reverse ) {
+	 					video_options.declaration.push( "reverse" );	
+	 				}
 	 			}
 
 				// Create the video overlay step filter
@@ -107,7 +111,6 @@ module.exports = {
 	 			}
 
 	 			video_options.overlay.push( overlay_filter );
-
 			}
 
 			if ( clip.has_audio ) {
@@ -118,6 +121,10 @@ module.exports = {
 
 				if ( clip.volume || clip.volume === 0 ) {
 					audio_options.filters.push( 'volume=' + clip.volume );
+				}
+
+				if ( clip.filters && clip.filters.reverse ) {
+					audio_options.filters.push( 'areverse' );
 				}
 			}
 
