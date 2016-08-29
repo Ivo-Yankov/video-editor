@@ -71,22 +71,51 @@ module.exports = {
 
 			var offset = clip.offset;
 			if ( clip.has_video ) {
+				// Convert the width, heigh, top and left properties from percentages to pixels
+				clip.top_left_x = parseInt(clip.left * resolution_width / 100);
+				clip.top_left_y = parseInt(clip.top * resolution_height / 100);
+				clip.bottom_right_x = parseInt(clip.top_left_x + clip.width * resolution_width / 100);
+				clip.bottom_right_y = parseInt(clip.top_left_y + clip.height * resolution_height / 100);
+
 				// Create the video declaration step filters
  				video_options.declaration.push( 'setpts=PTS+' + (clip.start - offset) + '/TB' );
 
 	 			var width = clip.bottom_right_x - clip.top_left_x;
 	 			var height = clip.bottom_right_y - clip.top_left_y;
-	 			// if( width != resolution_width || height != resolution_height ) {
-	 				video_options.declaration.push( 'scale=' + width + 'x' + height );
-	 			// }
+ 				video_options.declaration.push( 'scale=' + width + 'x' + height );
 
 	 			video_options.declaration.push( 'trim=start=' + clip.start + ':end=' + (clip.end + offset) );
 
 	 			if( clip.filters ) {
 	 				var clip_eq_filters = [];
-	 				for( filter in clip.filters ) {
-	 					if (clip.filters.hasOwnProperty(filter) && eq_filters.hasOwnProperty(filter) ) {
- 							clip_eq_filters.push(filter + "=" + clip.filters[filter]);
+	 				for( var filter in clip.filters ) {
+	 					if (clip.filters.hasOwnProperty(filter) ) {
+
+	 						if ( eq_filters.hasOwnProperty(filter) ) {
+	 							clip_eq_filters.push( filter + "=" + clip.filters[filter] );
+	 						}
+
+	 						if ( filter === "text" ) {
+
+	 							var text_filters = [];
+	 							if ( clip.filters[filter].text ) {
+	 								if ( !clip.filters[filter].x ) {
+	 									clip.filters[filter].x = "(w-tw)/2";
+	 								}
+
+	 								if ( !clip.filters[filter].y ) {
+										clip.filters[filter].y = "h-(2*lh)";
+	 								}
+
+		 							for ( var text_filter in clip.filters[filter] ) {
+		 								if ( clip.filters[filter].hasOwnProperty(text_filter) && clip.filters[filter][text_filter] ) {
+	 										text_filters.push( text_filter + '=' + clip.filters[filter][text_filter] );
+		 								}
+		 							}
+
+		 							video_options.declaration.push( "drawtext=" + text_filters.join(":") );
+	 							}
+	 						}
 	 					}
 	 				}
 
@@ -95,7 +124,7 @@ module.exports = {
 	 				}
 
 	 				if ( clip.filters.reverse ) {
-	 					video_options.declaration.push( "reverse" );	
+	 					video_options.declaration.push( "reverse" );
 	 				}
 	 			}
 
@@ -129,7 +158,17 @@ module.exports = {
 			}
 
 			// Add the input
-			this.addInput(filepath, video_options, audio_options);
+			if ( ! clip.file ) {
+				if ( clip.has_video && clip.filters.background_color) {
+					this.addInput('color=' + background + ':s=' + width + 'x' + height, {
+						video_options,
+						audio_options
+					}, {}, 'lavfi');
+				}
+			}
+			else {
+				this.addInput(filepath, video_options, audio_options);
+			}
 		}
 
 		//Create base video stream and set resolution
@@ -227,7 +266,7 @@ module.exports = {
 				this.addFilter( filter );
 
 				// Audio does not end at the end of the whole movie
-				concat_filter_end = "";
+				var concat_filter_end = "";
 				if ( stream.options.end < duration ) {
 					var end_silence_duration = duration - stream.options.end;
 					filter = 'aevalsrc=0:s=48000:d=' + end_silence_duration + this.streamNameToString( this.streams.last_audio_name );
@@ -292,6 +331,12 @@ module.exports = {
 
 		this.ffmpeg.on('error', function(err, stdout, stderr) {
 			console.log('Error: ' + err.message);
+	        if ( stdout ) {
+	        	console.log("stdout:\n" + stdout);
+	        }
+	        if ( stderr ) {
+	        	console.log("stderr:\n" + stderr);
+	        }
 		});
 
 		this.ffmpeg.on('end', function() {
@@ -353,7 +398,7 @@ module.exports = {
 		this.streams.last_audio_name = "a" + ( parseInt(this.streams.last_audio_name.replace("a", "")) + 1 );
 	},
 
-	decrementAudioStreamName: function( ) {
+	decrementAudioStreamName: function() {
 		this.streams.last_audio_name = "a" + ( parseInt(this.streams.last_audio_name.replace("a", "")) - 1 );
 	},
 };

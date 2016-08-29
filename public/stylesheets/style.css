@@ -54,8 +54,22 @@ body {
   margin-left: 1%;
 }
 
+.preview-video-holder {
+  background: #1c1c1c;
+  overflow: hidden;
+}
+
+.preview-video-handle {
+  width: 100%;
+  height: 100%;
+  -webkit-box-shadow: inset 0px 0px 1px 0.5px rgba(225, 225, 225, 0.8);
+  -moz-box-shadow: inset 0px 0px 1px 0.5px rgba(225, 225, 225, 0.8);
+  box-shadow: inset 0px 0px 1px 0.5px rgba(225, 225, 225, 0.8);
+}
+
 .preview-video video {
   width: 100%;
+  height: 100%;
 }
 
 .preview-video .timeline {
@@ -217,6 +231,10 @@ body {
   -webkit-box-shadow: inset 0px 0px 1px 0.5px rgba(225, 225, 225, 0.8);
   -moz-box-shadow: inset 0px 0px 1px 0.5px rgba(225, 225, 225, 0.8);
   box-shadow: inset 0px 0px 1px 0.5px rgba(225, 225, 225, 0.8);
+}
+
+.layer-media.blank-media {
+  background-color: #6485ff;
 }
 
 .layer-media.selected,

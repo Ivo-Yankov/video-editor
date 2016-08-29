@@ -5,7 +5,11 @@
 		timeline: "",
 		preview_timeline: "",
 		create_selection: false,
-		preview_video_interval: "",
+		preview_video_interval: "",	
+		aspect_ratio : { 
+			width: 2,
+			height: 1
+		},
 
 		init: function() {
 
@@ -85,6 +89,11 @@
 				this.prevTime = this.currentTime;
 			};
 
+			$.editor.resizePreviewScreens();
+
+			$('.preview-video-handle').resizable({
+				handles: "e, w, n, s, ne, se, nw, sw"
+			}).draggable();
 
 			$('#preview-current-selection').on('click', function(){
 				$.editor.create_selection = true;
@@ -92,6 +101,23 @@
 
 			$('#preview-current-remove-selections').on('click', function(){
 				$('#preview-current-area .timeline-selection').remove();
+			});
+
+			$('#apply-text').on('click', function(){
+				var $selected_media = $('.layer-media.selected');
+
+				$.editor.setFilter( $selected_media, 'text', {
+					text : $('#media-text').val(),
+					fontsize : $('#media-text-size').val() || 24,
+					fontcolor_expr : $('#media-text-color').val(),
+					y : $('#media-text-top').val(),
+					x : $('#media-text-left').val(),
+					box : $('#media-text-box').val(),
+					boxcolor : $('#media-text-boxcolor').val()
+				});
+
+				$.editor.preview_timeline.setTimelineMode( true, document.getElementById('preview-current') );
+				$.editor.updateState( $selected_media );
 			});
 
 			this.preview_timeline.timeline.on('click', function(e){
@@ -164,15 +190,39 @@
 			});
 
 			$('#remove-selected').on('click', function() {
-				$.editor.cropMedia( true );
+				$.editor.cropMedia( 'remove-selected' );
 			});
 
 			$('#remove-unselected').on('click', function() {
-				$.editor.cropMedia( false );
+				$.editor.cropMedia( 'crop' );
+			});
+
+			$('#copy-media').on('click', function() {
+				$.editor.cropMedia( 'copy' );
 			});
 
 			$('#remove-media').on('click', function() {
 				$('.layer-media.selected').remove();
+				$.editor.updateState();
+			});
+
+			$('#add-media').on('click', function() {
+				$new_layer = $.editor.timeline.addLayer();
+
+				$new_media = $.editor.createLayerMedia({
+					style : '',
+					filepath : '',
+					start : 0,
+					duration : 10,
+					offset: 0,
+					filters : "",
+					type : "blank"
+				})
+				
+				$new_media.addClass('blank-media');
+				$new_layer.append($new_media);
+				$.editor.initLayerMedia($new_media);
+
 				$.editor.updateState();
 			});
 
@@ -192,7 +242,25 @@
 				var value = $('#reverse-checkbox').is(':checked');
 				$.editor.preview_timeline.setTimelineMode( true, document.getElementById('preview-current') );
 				$.editor.setFilter( $selected_media, 'reverse', value );
-				$.editor.updateState ( $selected_media );				
+				$.editor.updateState ( $selected_media );
+			});
+
+			$('#apply-overlay-position').on('click', function() {
+				var $selected_media = $('.layer-media.selected');
+				$.editor.applyOverlayPosition( $selected_media );
+			});
+
+			$('#reset-overlay-position').on('click', function() {
+				var $selected_media = $('.layer-media.selected');
+				$.editor.resetOverlayPosition( $selected_media );
+			});
+
+			$('#set-media-background-color').on('click', function() {
+				var $selected_media = $('.layer-media.selected');
+				var $handle = $('#preview-current').closest('.preview-video-handle');
+				var color = $('#custom-media-background-color').val();
+				$handle.css('background-color', color );
+				$.editor.setFilter( $selected_media, 'background_color', color.replace('#', '') );
 			});
 
 			$( ".media" )
@@ -338,12 +406,20 @@
 					
 					$e.draggable({ 
 						snap: ".layer, .layer:before, .layer-media",
-						snapTolerance: 10,
+						snapTolerance: 10
+					});
+
+					$e.resizable({
+						handles: "e, w",
 						stop: function( event, ui ) {
-						},
-					    start: function(event, ui) {
-					        selectedObjs = $('.layer-media.selected');
-					    } 
+							var $this = $(this);
+							var width = $this.width();
+							var timeline_duration = Number($.editor.timeline.timeline.attr('data-duration'));
+							var timeline_width = $this.closest('.layer').width();
+
+							$this.attr('data-duration', (imeline_duration * width / timeline_width );
+							$.editor.updateState();
+						}
 					});
 				}
 
@@ -396,6 +472,18 @@
 					filters = JSON.parse(filters);
 				}
 
+				var top = 0;
+				var left = 0;
+				var width = 100;
+				var height = 100;
+				var overlay_filters = $.editor.getFilter( $e, 'overlay' );
+				if ( overlay_filters ) {
+					left = overlay_filters.left || 0;
+					top = overlay_filters.top || 0;
+					width = overlay_filters.width || 100;
+					height = overlay_filters.height || 100;
+				}
+
 				timeline_data.push({
 					'file': $e.attr('data-filepath'),
 					'start': start,
@@ -403,10 +491,10 @@
 					'offset': Number($e.attr('data-offset')),
 					'timeline_layer': 0,
 					'volume': 1,
-					'top_left_x': 0,
-					'top_left_y': 0,
-					'bottom_right_x': 320,
-					'bottom_right_y': 180,
+					'left': left,
+					'top': top,
+					'width': width,
+					'height': height,
 					'has_video': true,
 					'has_audio': true,
 					'filters' : filters
@@ -417,37 +505,13 @@
 		},
 
 		renderVideo: function () {
-			var timeline_data = [];
-			var $media = $('.layer-media');
-
-			$media.each(function(i, e){
-				$e = $(e);
-				timeline_data.push({
-					'file': $e.attr('data-filepath'),
-					'start': 0,
-					'end': Number($e.attr('data-duration')),
-					'timeline_start': Number($e.attr('data-start')),
-					'timeline_layer': 0,
-					'volume': 1,
-					'top_left_x': 0,
-					'top_left_y': 0,
-					'bottom_right_x': 320,
-					'bottom_right_y': 180,
-					'has_video': true,
-					'has_audio': true
-				});
-			})
-			.promise()
-			.done( function(){
-				console.log({'clips' : timeline_data});
-				$.ajax({
-					url: "/editor",
-					data: {'clips' : timeline_data},
-					method: "post",
-					dataType: "json"
-				}).done(function( data ) {
-					console.log(data);
-				});
+			$.ajax({
+				url: "/editor",
+				data: this.getEditorState(),
+				method: "post",
+				dataType: "json"
+			}).done(function( data ) {
+				console.log(data);
 			});
 		},
 
@@ -464,19 +528,21 @@
 			// }
 		},
 
-		cropMedia: function( delete_selected ) {
+		cropMedia: function( action ) {
 			var $selected = $('.layer-media.selected');
 			var selection_data = $.editor.preview_timeline.getSelectionData();
+			var media_duration = Number($selected.attr('data-duration'));
+			var media_start = Number($selected.attr('data-start'));
+			var media_end = media_start + Number($selected.attr('data-duration'));
 
 			if (selection_data.length) {
 				// Limit to 1 selection only
 				selection_data = selection_data[0];
 			}
-
-			var media_duration = Number($selected.attr('data-duration'));
-
-			var media_start = Number($selected.attr('data-start'));
-			var media_end = media_start + Number($selected.attr('data-duration'));
+			else {
+				selection_data.start = 0;	
+				selection_data.end = media_duration;	
+			}
 
 			var media_arr = [];
 
@@ -498,7 +564,7 @@
 
 			var media_offset = Number($selected.attr('data-offset'));			
 
-			if ( delete_selected ) {
+			if ( action == 'remove-selected' ) {
 				if ( selection_data.start > 0 ) {
 					media_arr.push(
 						$.editor.createLayerMedia({
@@ -507,6 +573,7 @@
 							start : media_start,
 							offset : media_offset,
 							duration : selection_data.start,
+							filters : $selected.attr('data-filters')
 						})
 					);
 				}
@@ -518,19 +585,33 @@
 							filepath : $selected.attr('data-filepath'),
 							start : media_start + selection_data.start,
 							duration : media_duration - selection_data.end,
-							offset: media_offset + selection_data.end
+							offset: media_offset + selection_data.end,
+							filters : $selected.attr('data-filters')
 						})
 					);
 				}
 			}
-			else {
+			else if ( action == 'crop' ) {
 				media_arr.push(
 					$.editor.createLayerMedia({
 						style : $selected.attr('style'),
 						filepath : $selected.attr('data-filepath'),
 						start : media_start,
 						duration : selection_data.end - selection_data.start,
-						offset: media_offset + selection_data.start
+						offset: media_offset + selection_data.start,
+						filters : $selected.attr('data-filters')
+					})
+				);
+			}
+			else if ( action == 'copy' ) {
+				media_arr.push(
+					$.editor.createLayerMedia({
+						style : $selected.attr('style'),
+						filepath : $selected.attr('data-filepath'),
+						start : media_start,
+						duration : selection_data.end - selection_data.start,
+						offset: media_offset + selection_data.start,
+						filters : $selected.attr('data-filters')
 					})
 				);
 			}
@@ -546,7 +627,9 @@
 
 				media_arr[0].trigger('click');
 
-				$selected.remove();
+				if ( action != 'copy' ) {
+					$selected.remove();
+				}
 			}
 
 			$('#preview-current-area .timeline-selection').remove();
@@ -567,6 +650,88 @@
 			filters = JSON.stringify(filters);
 
 			$media.attr('data-filters', filters);
+		},
+
+		getFilter : function( $media, filter ) {
+			var filters = $media.attr('data-filters');
+			if ( filters ) {
+				filters = JSON.parse(filters);
+				return filters[filter];
+			}
+
+			return {};
+		},
+
+		applyOverlayPosition : function ( $media ) {
+			if ( $media ) {
+				var $handle = $('#preview-current').closest('.preview-video-handle');
+				var $parent = $handle.parent();
+				
+				var total_width = $parent.width();
+				var total_height = $parent.height();
+
+				var width = $handle.width();
+				var height = $handle.height();
+				var left = $handle.offset().left - $parent.offset().left;
+				var top = $handle.offset().top - $parent.offset().top;
+
+				var overlay_filters = $.editor.getFilter( $media, 'overlay' );
+				
+				overlay_filters.width = width * 100 / total_width;
+				overlay_filters.height = height * 100 / total_height;
+				overlay_filters.left = left * 100 / total_width;
+				overlay_filters.top = top * 100 / total_height;
+
+				$.editor.setFilter( $media, 'overlay', overlay_filters );
+				$.editor.updateState ( $media );
+
+				$.editor.preview_timeline.setTimelineMode( true, document.getElementById('preview-current') );
+
+
+				$handle.css({
+					'width': '100%',
+					'height': '100%',
+					'left': 0,
+					'top': 0
+				});
+			}				
+
+		},
+
+		resetOverlayPosition : function ( $media ) {
+			var $handle = $('#preview-current').closest('.preview-video-handle'),
+				width = '100%',
+				height = '100%',
+				left = 0,
+				top = 0;
+
+			if ( $media ) {
+				var overlay_filters = $.editor.getFilter( $media, 'overlay' );
+				
+				overlay_filters.width = width;
+				overlay_filters.height = height;
+				overlay_filters.left = left;
+				overlay_filters.top = top;
+
+				$.editor.setFilter( $media, 'overlay', overlay_filters );
+				$.editor.updateState ( $media );
+			}				
+			
+			$handle.css({
+				'width': width,
+				'height': height,
+				'left': left,
+				'top': top
+			});
+
+		},
+
+		resizePreviewScreens : function() {	
+			$('.preview-video-holder').each( function(i, e) {
+				$e = $(e);
+				var width = $e.width();
+				$e.height(width * $.editor.aspect_ratio.height / $.editor.aspect_ratio.width);
+			});
 		}
 	}
 
@@ -598,9 +763,10 @@
 		};
 
 		this.addLayer = function(){
-			var layer = $('<div class="layer"></div>');
-			this.timeline.append(layer);
-			this.renderLayers(layer);
+			var $layer = $('<div class="layer"></div>');
+			this.timeline.append( $layer );
+			this.renderLayers( $layer );
+			return $layer;
 		},
 
 		this.render = function() {

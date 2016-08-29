@@ -37,7 +37,12 @@
 
 <div id="preview-area" class="ui-area">
 	<div class="preview-video" id="preview-current-area">
-		<video id="preview-current" src=""></video>
+		
+		<div class="preview-video-holder">
+			<div class="preview-video-handle">
+				<video id="preview-current" src=""></video>
+			</div>
+		</div>
 		
 		<button disabled="true" id="preview-current-play">Play</button>
 		<button disabled="true" id="preview-current-pause">Pause</button>
@@ -51,11 +56,12 @@
 			<div class="layer"></div>
 		</div>
 		
-		<div style="padding: 10px;border: 1px solid black;margin: 10px">
+		<div style="padding: 10px;border: 1px solid black;margin: 10px; display: none">
 			Done effects:
 			<div>
 				<button id="remove-selected">Remove Selected</button>
 				<button id="remove-unselected">Crop</button>
+				<button id="copy-media">Copy Media</button>
 			</div>
 
 			<div>
@@ -97,22 +103,44 @@
 				<input type="checkbox" id="reverse-checkbox">
 				<button id="reverse">Reverse</button>
 			</div>
+			<div>
+				<button id="apply-overlay-position">apply-overlay-position</button>
+				<button id="reset-overlay-position">reset-overlay-position</button>
+			</div>
+			
+			<div>
+				Text: <textarea id="media-text"></textarea><br>
+				Size: <input id="media-text-size"><br>
+				Color: <input id="media-text-color"><br>
+				Box: <input id="media-text-box"><br>
+				BoxColor: <input id="media-text-boxcolor"><br>
+				Top: <input id="media-text-top"><br>
+				Left: <input id="media-text-left"><br>
+
+				<button id="apply-text">Apply</button>
+			</div>
+
 		</div>
 		<div style="padding: 10px;border: 1px solid black;margin: 10px">
 			WIP effects: 
+			<div>
+				Custom Media<br>
+				Background: <input type="color" id="media-background-color">
+				<button id="set-media-background-color">Set Background Color</button>
+			</div>
 
+			
 		</div>
 		<div style="padding: 10px;border: 1px solid black;margin: 10px">
 			TODO effects:
 
-			<button>Copy Media</button>
-			<button>Overlay</button>
 			<button>Circle</button>
-			<button>Text</button>
 		</div>
 	</div>
 	<div class="preview-video">
-		<video id="preview-final" src=""></video>
+		<div class="preview-video-holder">
+			<video id="preview-final" src=""></video>
+		</div>
 	</div>
 </div>
 
@@ -131,6 +159,7 @@
 		<button id="preview-final-pause">Pause</button>
 		<button id="preview-final-stop">Stop</button>
 		<button id="remove-media">Remove Media</button>
+		<button id="add-media">New Media</button>
 	</div>
 	<div class="ui-area timeline-holder">
 		<div id="timeline" class="timeline" data-zoom="1" data-markerdensity="1.5" data-duration="600" data-endtime="600" data-layerwidth="200">
