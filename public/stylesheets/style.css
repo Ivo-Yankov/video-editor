@@ -120,6 +120,11 @@ body {
   padding: 5px;
 }
 
+.audio,
+.layer-media[data-type=audio] {
+  background-color: #3cfff6;
+}
+
 .timeline-holder {
   height: 100%;
 }

@@ -45,7 +45,8 @@ module.exports = {
 		}, {}, 'lavfi');
 
 		var duration = 0;
-
+		var there_is_video = false;
+		var there_is_audio = false;
 		for( var i = 0; i < clips.length; i++ ) {
 			var clip = clips[i];
 			clip.end = Number(clip.end);
@@ -68,9 +69,11 @@ module.exports = {
 				end: clip.end,
 				filters: []
 			};
-
+			
 			var offset = clip.offset;
-			if ( clip.has_video ) {
+			if ( clip.hasvideo ) {
+				there_is_video = true;
+
 				// Convert the width, heigh, top and left properties from percentages to pixels
 				clip.top_left_x = parseInt(clip.left * resolution_width / 100);
 				clip.top_left_y = parseInt(clip.top * resolution_height / 100);
@@ -142,28 +145,37 @@ module.exports = {
 	 			video_options.overlay.push( overlay_filter );
 			}
 
-			if ( clip.has_audio ) {
+			if ( clip.hasaudio ) {
+				there_is_audio = true;
+
+				var volume = 1;
+				if ( clip.filters && clip.filters.volume ) {
+					volume = clip.filters.volume;
+				}
+
 				// Create the audio filters
  				audio_options.filters.push( 'asetpts=PTS+' + (clip.start - offset) + '/TB' );
 
 				audio_options.filters.push( 'atrim=start=' + clip.start + ':end=' + (clip.end + offset) );
+				audio_options.filters.push( 'aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo' );
 
-				if ( clip.volume || clip.volume === 0 ) {
-					audio_options.filters.push( 'volume=' + clip.volume );
+				if ( volume && volume !== 1 ) {
+					audio_options.filters.push( 'volume=' + volume );
 				}
 
 				if ( clip.filters && clip.filters.reverse ) {
 					audio_options.filters.push( 'areverse' );
 				}
 			}
-
+			
 			// Add the input
 			if ( ! clip.file ) {
-				if ( clip.has_video && clip.filters.background_color) {
-					this.addInput('color=' + background + ':s=' + width + 'x' + height, {
+				if ( clip.hasvideo && clip.filters.background_color) {
+					this.addInput(
+						'color=' + clip.filters.background_color + ':s=' + width + 'x' + height,
 						video_options,
-						audio_options
-					}, {}, 'lavfi');
+						false,
+						'lavfi');
 				}
 			}
 			else {
@@ -183,6 +195,7 @@ module.exports = {
 		//Declare video streams
 		for ( var i = 0; i < this.streams.video.length; i++ ) {
 			var stream = this.streams.video[i];
+
 			if ( stream.options.declaration && stream.options.declaration.length ) {
 
 				// Get input stream
@@ -201,7 +214,6 @@ module.exports = {
 
 		//Overlay step
 		var overlay_index = 0;
-
 		for ( var i = 0; i < this.streams.video.length; i++ ) {
 			var stream = this.streams.video[i];
 			if ( stream.options.overlay && stream.options.overlay.length ) {
@@ -229,10 +241,9 @@ module.exports = {
 		//Audio step
 		var amerge_filter = "";
 		var amerge_count = 0;
-
 		for ( var i = 0; i < this.streams.audio.length; i++ ) {
 			filter = "";
-			
+			this.incrementAudioStreamName();
 			concat_filter_start = "";
 			concat_count = 1;
 			var stream = this.streams.audio[i];
@@ -285,7 +296,7 @@ module.exports = {
 					this.addFilter( concat_filter );
 					amerge_count++;
 					amerge_filter += this.streamNameToString( this.streams.last_audio_name );
-					this.incrementAudioStreamName();
+					// this.incrementAudioStreamName();
 				}
 			}
 		}
@@ -296,17 +307,22 @@ module.exports = {
 			amerge_filter += this.streamNameToString( this.streams.last_audio_name );
 			this.addFilter( amerge_filter );
 		}
-		else if( !concat_filter_start && !concat_filter_end ) {
+		else if( !concat_filter_start && !concat_filter_end && this.streams.last_audio_name != 'a0' ) {
 			this.decrementAudioStreamName();
 		}
 
 		this.ffmpeg.complexFilter(this.complex_filters);
 
-		this.ffmpeg.addOption('-map', this.streamNameToString( this.streams.last_video_name ) );
-		this.ffmpeg.addOption('-map', this.streamNameToString( this.streams.last_audio_name ) );
+		// if (there_is_video) {
+			this.ffmpeg.addOption('-map', this.streamNameToString( this.streams.last_video_name ) );
+		// }
+
+		if (there_is_audio) {
+			this.ffmpeg.addOption('-map', this.streamNameToString( this.streams.last_audio_name ) );
+			this.ffmpeg.addOption('-ac', 2 );
+			this.ffmpeg.addOption('-b:a', '48k' );
+		}
 		this.ffmpeg.addOption('-t', duration );
-		this.ffmpeg.addOption('-ac', 2 );
-		this.ffmpeg.addOption('-b:a', '48k' );
 
 		return this.ffmpeg;
 	},
@@ -362,8 +378,14 @@ module.exports = {
 			this.ffmpeg.inputFormat(format);
 		}
 
-		this.streams.video.push( this.addTrack( file, 'v', video_options ) );
-		this.streams.audio.push( this.addTrack( file, 'a', audio_options ) );
+		if (video_options) {
+			this.streams.video.push( this.addTrack( file, 'v', video_options ) );
+		}
+		
+		if (audio_options) {
+			this.streams.audio.push( this.addTrack( file, 'a', audio_options ) );
+		}
+
 		this.input_index++;
 	},
 

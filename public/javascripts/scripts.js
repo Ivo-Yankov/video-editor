@@ -14,6 +14,10 @@
 		init: function() {
 
 			this.socket = io();
+			this.socket.on('refresh', function() {
+				window.location.reload();
+			});
+
 			this.timeline = new $.timeline( $('#timeline'), {
 				zoom_button: $('.zoom-button'),
 				droppable: true,
@@ -103,21 +107,8 @@
 				$('#preview-current-area .timeline-selection').remove();
 			});
 
-			$('#apply-text').on('click', function(){
-				var $selected_media = $('.layer-media.selected');
-
-				$.editor.setFilter( $selected_media, 'text', {
-					text : $('#media-text').val(),
-					fontsize : $('#media-text-size').val() || 24,
-					fontcolor_expr : $('#media-text-color').val(),
-					y : $('#media-text-top').val(),
-					x : $('#media-text-left').val(),
-					box : $('#media-text-box').val(),
-					boxcolor : $('#media-text-boxcolor').val()
-				});
-
-				$.editor.preview_timeline.setTimelineMode( true, document.getElementById('preview-current') );
-				$.editor.updateState( $selected_media );
+			$('#apply-fitlers').on('click', function(){
+				$.editor.applyFilters();
 			});
 
 			this.preview_timeline.timeline.on('click', function(e){
@@ -216,7 +207,9 @@
 					duration : 10,
 					offset: 0,
 					filters : "",
-					type : "blank"
+					type : "blank",
+					hasvideo : true,
+					hasaudio : false
 				})
 				
 				$new_media.addClass('blank-media');
@@ -224,25 +217,6 @@
 				$.editor.initLayerMedia($new_media);
 
 				$.editor.updateState();
-			});
-
-			$('.set-eq-filter').on('click', function() {
-				var $selected_media = $('.layer-media.selected');
-				var $this = $(this);
-				var filter = $this.attr('data-filter');
-				var value = $this.siblings('input').val();
-				$.editor.preview_timeline.setTimelineMode( true, document.getElementById('preview-current') );
-				$.editor.setFilter( $selected_media, filter, value );
-				$.editor.updateState ( $selected_media );
-			});
-
-			$('#reverse').on('click', function() {
-				var $selected_media = $('.layer-media.selected');
-				
-				var value = $('#reverse-checkbox').is(':checked');
-				$.editor.preview_timeline.setTimelineMode( true, document.getElementById('preview-current') );
-				$.editor.setFilter( $selected_media, 'reverse', value );
-				$.editor.updateState ( $selected_media );
 			});
 
 			$('#apply-overlay-position').on('click', function() {
@@ -255,12 +229,21 @@
 				$.editor.resetOverlayPosition( $selected_media );
 			});
 
-			$('#set-media-background-color').on('click', function() {
-				var $selected_media = $('.layer-media.selected');
-				var $handle = $('#preview-current').closest('.preview-video-handle');
-				var color = $('#custom-media-background-color').val();
-				$handle.css('background-color', color );
-				$.editor.setFilter( $selected_media, 'background_color', color.replace('#', '') );
+			$('#delete-media').on('click', function() {
+				var id = $('.media.selected').attr('data-id');
+				$.ajax({
+					url: "/delete-media",
+					data: {
+						id: id
+					},
+					method: "post",
+					dataType: "json"
+				}).done(function( data ) {
+					console.log(data);
+					if (data == 1) {
+						$('.media[data-id=' + id + '], .layer-media[data-id=' + id + ']').remove();
+					}
+				});
 			});
 
 			$( ".media" )
@@ -269,11 +252,15 @@
 				snapTolerance: 10,
 				helper: function() {
 					$this = $(this);
+
 					args = {
 						background : $this.find('img').attr('src'),
 						duration : $this.attr('data-duration'),
 						filepath : $this.attr('data-filepath'),
-						offset : 0
+						offset : 0,
+						hasvideo : $this.attr('data-hasvideo'),
+						hasaudio : $this.attr('data-hasaudio'),
+						type : $this.attr('data-type')
 					}
 
 					return $.editor.createLayerMedia( args );
@@ -284,30 +271,9 @@
 			})
 			.on('click', function() {
 				$('.selected').not(this).removeClass('selected');
-				$this = $(this);
-
-				var $preview_area = $('#preview-current-area');
-				var $timeline = $preview_area.find('.timeline');
-
-
-				if ($this.hasClass('selected')) {
-					$('#preview-current').attr('src', '');
-				}
-				else {
-					$('#preview-current').attr('src', $this.attr('data-filepath'));
-				}
-				
-				$preview_area.find('button').attr('disabled', 'true');
-				$timeline.attr('data-disabled', 'true');
-				$timeline.attr('data-duration', '12');
-				$timeline.attr('data-endtime', '12');
-				$timeline.attr('data-offset', '0');
-
-				$timeline.attr('data-zoom', '1');
-				$.editor.preview_timeline.reinit();
-
 
 				$(this).toggleClass('selected');
+				$.editor.updateInterfaceElements();
 			});
 
 			$('#add-layer').on('click', function(){
@@ -323,6 +289,7 @@
 			});	
 
 			this.startHotKeyListener();
+			$.editor.updateInterfaceElements();
 		},
 
 		createLayerMedia : function ( args ) {
@@ -349,43 +316,17 @@
 
 		mediaOnClickHandler : function( e ){
 			$this = $(e.target);
-			if( ! $.editor.isKeyPressed('shift') ) {
-				$('.selected').not(e.target).removeClass('selected');
-
-				var $preview_area = $('#preview-current-area');
-				var $timeline = $preview_area.find('.timeline');
-
-				if ($this.hasClass('selected')) {
-					$('#preview-current').attr('src', '');
-					$preview_area.find('button').attr('disabled', 'true');
-					$timeline.attr('data-disabled', 'true');
-					$timeline.attr('data-duration', '12');
-					$timeline.attr('data-endtime', '12');
-					$timeline.attr('data-offset', '0');
-					$(this).removeClass('selected');
-				}
-				else {
-					$('#preview-current').attr('src', $this.attr('data-filepath'));
-					$preview_area.find('button').removeAttr('disabled');
-					$timeline.attr('data-disabled', 'false');
-					$timeline.attr('data-duration', $this.attr('data-duration'));
-					$timeline.attr('data-endtime', $this.attr('data-duration'));
-					$timeline.attr('data-offset', $this.attr('data-offset'));
-					document.getElementById('preview-current').currentTime = $this.attr('data-offset');
-					$(this).addClass('selected');
-
-					if ( $this.attr('data-filters') ) {
-						$.editor.preview_timeline.setTimelineMode ( true, document.getElementById('preview-current') );
-					}
-					else {
-						$.editor.preview_timeline.setTimelineMode ( false, document.getElementById('preview-current') );	
-					}
-				}
-
-				$.editor.preview_timeline.reinit();
-
-			}
 			
+			$('.selected').not(e.target).removeClass('selected');
+
+			if ($this.hasClass('selected')) {
+				$this.removeClass('selected');
+			}
+			else {
+				$this.addClass('selected');
+			}
+
+			$.editor.updateInterfaceElements();
 		},
 
 		initLayerMedia : function ( media ) {
@@ -417,7 +358,7 @@
 							var timeline_duration = Number($.editor.timeline.timeline.attr('data-duration'));
 							var timeline_width = $this.closest('.layer').width();
 
-							$this.attr('data-duration', (imeline_duration * width / timeline_width );
+							$this.attr('data-duration', (timeline_duration * width / timeline_width ) );
 							$.editor.updateState();
 						}
 					});
@@ -451,7 +392,16 @@
 			var start;
 
 			if ( !single_media ) {
-				var $media = $('#timeline .layer-media');
+				$layers = $('.layer');
+				var $media = [];
+				for ( var i = $layers.length - 1; i >= 0; i-- ) {
+					$layer_media = $($layers[i]).find('.layer-media');
+					if ( $layer_media.length ) {
+						for ( var j = 0; j < $layer_media.length; j++ ) {
+							$media.push( $($layer_media[j]) );
+						}
+					}
+				}
 			}
 			else {
 				$media = single_media;
@@ -468,8 +418,26 @@
 				}
 
 				var filters = $e.attr('data-filters');
-				if (filters) {
+				if (filters && filters != 'undefined') {
+					console.log(filters);
 					filters = JSON.parse(filters);
+				}
+
+				var has_video = $e.attr('data-hasvideo');
+				var has_audio = $e.attr('data-hasaudio');
+
+				if ( !has_video || has_video == 'false') {
+					has_video = false;
+				}
+				else {
+					has_video = true;
+				}
+
+				if ( !has_audio || has_audio == 'false') {
+					has_audio = false;
+				}
+				else {
+					has_audio = true;
 				}
 
 				var top = 0;
@@ -495,8 +463,8 @@
 					'top': top,
 					'width': width,
 					'height': height,
-					'has_video': true,
-					'has_audio': true,
+					'hasvideo': has_video,
+					'hasaudio': has_audio,
 					'filters' : filters
 				});
 			}
@@ -519,13 +487,16 @@
 			var state = this.getEditorState( single_media );
 			console.log(state);
 			this.socket.emit('update_editor_state', state);
-			// var video = document.getElementById('preview-final');
-			// video.pause();
-			// preview_start = document.getElementById('preview-final').timelineTime;
-			// video.src = "/preview";
-			// if ( preview_start ) {
-			// 	video.src += "?preview_start=" + preview_start;
-			// }
+
+			if ( ! single_media ) {
+				var video = document.getElementById('preview-final');
+				video.pause();
+				preview_start = document.getElementById('preview-final').timelineTime;
+				video.src = "/preview";
+				if ( preview_start ) {
+					video.src += "?preview_start=" + preview_start;
+				}
+			}
 		},
 
 		cropMedia: function( action ) {
@@ -564,56 +535,51 @@
 
 			var media_offset = Number($selected.attr('data-offset'));			
 
+			var commong_media_args = {
+				style : $selected.attr('style'),
+				filepath : $selected.attr('data-filepath'),
+				filters : $selected.attr('data-filters'),
+				hasaudio : $selected.attr('data-hasaudio'),
+				hasvideo : $selected.attr('data-hasvideo'),
+				type : $selected.attr('data-type'),
+			};
+
+
+
 			if ( action == 'remove-selected' ) {
 				if ( selection_data.start > 0 ) {
-					media_arr.push(
-						$.editor.createLayerMedia({
-							style : $selected.attr('style'),
-							filepath : $selected.attr('data-filepath'),
-							start : media_start,
-							offset : media_offset,
-							duration : selection_data.start,
-							filters : $selected.attr('data-filters')
-						})
-					);
+					var args = commong_media_args;
+					args.start = media_start;
+					args.offset = media_offset;
+					args.duration = selection_data.start;
+
+					media_arr.push( $.editor.createLayerMedia(args) );
 				}
 
 				if ( selection_data.end < media_duration ) {
-					media_arr.push(
-						$.editor.createLayerMedia({
-							style : $selected.attr('style'),
-							filepath : $selected.attr('data-filepath'),
-							start : media_start + selection_data.start,
-							duration : media_duration - selection_data.end,
-							offset: media_offset + selection_data.end,
-							filters : $selected.attr('data-filters')
-						})
-					);
+					var args = commong_media_args;
+					args.start = media_start + selection_data.start;
+					args.duration = media_duration - selection_data.end;
+					args.offset = media_offset + selection_data.end;
+
+					media_arr.push( $.editor.createLayerMedia(args) );
 				}
 			}
 			else if ( action == 'crop' ) {
-				media_arr.push(
-					$.editor.createLayerMedia({
-						style : $selected.attr('style'),
-						filepath : $selected.attr('data-filepath'),
-						start : media_start,
-						duration : selection_data.end - selection_data.start,
-						offset: media_offset + selection_data.start,
-						filters : $selected.attr('data-filters')
-					})
-				);
+				var args = commong_media_args;
+				args.start = media_start;
+				args.duration = selection_data.end - selection_data.start;
+				args.offset = media_offset + selection_data.start;
+
+				media_arr.push( $.editor.createLayerMedia(args) );
 			}
 			else if ( action == 'copy' ) {
-				media_arr.push(
-					$.editor.createLayerMedia({
-						style : $selected.attr('style'),
-						filepath : $selected.attr('data-filepath'),
-						start : media_start,
-						duration : selection_data.end - selection_data.start,
-						offset: media_offset + selection_data.start,
-						filters : $selected.attr('data-filters')
-					})
-				);
+				var args = commong_media_args;
+				args.start = media_start;
+				args.duration = selection_data.end - selection_data.start;
+				args.offset = media_offset + selection_data.start;
+
+				media_arr.push( $.editor.createLayerMedia(args) );
 			}
 
 			var $layer = $selected.closest('.layer');
@@ -634,6 +600,58 @@
 
 			$('#preview-current-area .timeline-selection').remove();
 			$.editor.updateState();
+		},
+
+		applyFilters: function () {
+			var $selected_media = $('.layer-media.selected');
+			if ( $selected_media.length ) {
+
+				var preview_video = document.getElementById('preview-current');
+				var filter;
+				var value;
+				var media_type = $selected_media.attr('data-type');
+
+				if ( media_type != 'audio' ) {
+					$.editor.setFilter( $selected_media, 'text', {
+						text : $('#media-text').val(),
+						fontsize : $('#media-text-size').val() || 24,
+						fontcolor_expr : $('#media-text-color').val(),
+						y : $('#media-text-top').val(),
+						x : $('#media-text-left').val(),
+						box : $('#media-text-box').val(),
+						boxcolor : $('#media-text-boxcolor').val()
+					});
+
+					var $eq_filters = $('.eq-filter');
+					for ( var i = 0; i < $eq_filters.length; i++ ) {
+						$eq_filter = $($eq_filters[i]);
+						filter = $eq_filter.attr('id');
+						value = $eq_filter.val();
+						$.editor.setFilter( $selected_media, filter, value );				
+					}
+
+					value = $('#reverse-checkbox').is(':checked');
+					$.editor.setFilter( $selected_media, 'reverse', value );
+				}
+
+				if ( media_type == 'audio' ) {
+					$.editor.setFilter( $selected_media, 'volume', $('#volume').val() );	
+				}
+
+				if ( media_type == 'blank' ) {
+					var $handle = $('#preview-current').closest('.preview-video-handle');
+					var color = $('#media-background-color').val();
+					$handle.css('background-color', color );
+					$.editor.setFilter( $selected_media, 'background_color', color.replace('#', '') );
+				}
+
+				if ( media_type == 'audio' ) {
+
+				}
+				
+				$.editor.preview_timeline.setTimelineMode( true, preview_video );
+				$.editor.updateState( $selected_media );
+			}
 		},
 
 		setFilter : function( $media, filter, value ) {
@@ -732,6 +750,81 @@
 				var width = $e.width();
 				$e.height(width * $.editor.aspect_ratio.height / $.editor.aspect_ratio.width);
 			});
+		},
+
+		updateInterfaceElements : function() {
+
+			$selected_media = $('.selected');
+			var media_type = $selected_media.attr('data-type');
+			$('#delete-media').attr('disabled', true);
+
+			var $preview_area = $('#preview-current-area');
+			var $timeline = $preview_area.find('.timeline');
+			
+			if ( $selected_media.length ) {
+
+				$timeline.attr('data-disabled', false);
+				$timeline.attr('data-duration', $selected_media.attr('data-duration'));
+				$timeline.attr('data-endtime', $selected_media.attr('data-duration'));
+				$timeline.attr('data-offset', $selected_media.attr('data-offset'));
+
+				// Media element from the library is selected
+				if ( $selected_media.hasClass('media') ) {
+					$('#delete-media').attr('disabled', false);
+					$('#preview-current').attr('src', $selected_media.attr('data-filepath'));
+					$preview_area.find('button, input, textarea').attr('disabled', true);
+					$preview_area.find('.preview-control-button').attr('disabled', false);
+
+					$timeline.attr('data-offset', '0');
+
+					$timeline.attr('data-zoom', '1');					
+				}
+
+				// Media element from the timeline is selected
+				if ( $selected_media.hasClass('layer-media') ) {
+
+					$('#volume').attr('disabled', false);
+
+					$('#preview-current').attr('src', $selected_media.attr('data-filepath'));
+
+					if ( media_type != 'audio' ) {
+						$preview_area.find('button, input, textarea').attr('disabled', false);
+					}
+					else {
+						$preview_area.find('.preview-control-button').attr('disabled', false);
+						$('#apply-fitlers').attr('disabled', false);
+					}
+					var is_blank = ( media_type == 'blank' );
+
+					if ( !is_blank ) {
+						document.getElementById('preview-current').currentTime = $selected_media.attr('data-offset') || 0;
+					}
+
+					if ( $selected_media.attr('data-filters') || is_blank ) {
+						$.editor.preview_timeline.setTimelineMode ( true, document.getElementById('preview-current') );
+					}
+					else {
+						$.editor.preview_timeline.setTimelineMode ( false, document.getElementById('preview-current') );
+					}
+				}
+			}
+
+			// There is nothing selected
+			else {
+
+				$preview_area.find('button, input, textarea').attr('disabled', 'true');
+
+				$('#preview-current').attr('src', '');
+				$preview_area.find('button').attr('disabled', 'true');
+				$timeline.attr('data-disabled', 'true');
+				$timeline.attr('data-duration', '12');
+				$timeline.attr('data-endtime', '12');
+				$timeline.attr('data-offset', '0');
+
+				$timeline.attr('data-zoom', '1');
+			}
+			
+			$.editor.preview_timeline.reinit();
 		}
 	}
 

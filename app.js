@@ -2,16 +2,14 @@ var express = require('express');
 var path = require('path');
 var favicon = require('serve-favicon');
 var logger = require('morgan');
-var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var mustacheExpress = require('mustache-express');
 var passport = require('passport');
-var flash = require('connect-flash');
+var flash = require('connect-flash'); //TODO 
 var routes = require('./routes/index');
 var bb = require('express-busboy');
 var session = require('express-session');
 var sharedsession = require("express-socket.io-session");
-var socketStream = require('socket.io-stream');
 var fs = require('fs');
 
 var editor = require('./editor.js');
@@ -20,10 +18,6 @@ var app = express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 app.io = io;
-
-//include models
-var User = require("./models/user").User;
-var Video = require("./models/video").Video;
 
 //database
 var mongo = require('mongodb');
@@ -76,10 +70,9 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(express.static(__dirname + '/public'));
 
-bb.extend(app, { upload: true, path: 'public/uploads' });
+bb.extend(app, { upload: true, path: 'public/media' });
 
 app.use('/', routes);
-
 
 app._router.stack.forEach(function(r){
   if (r.route && r.route.path){
@@ -96,7 +89,6 @@ io.on('connection', function(socket){
 
     var data = socket.handshake.session.editor_state;
     if( data ){
-      var preview_stream = socketStream.createStream();
       if( socket.ffmpeg_preview ) {
         socket.ffmpeg_preview.kill();
       }

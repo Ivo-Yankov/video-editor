@@ -16,27 +16,28 @@
 </html>
 
 <div id="media-area" class="ui-area">
-    <form ref='uploadForm' 
-        id='uploadForm' 
-        action='/upload' 
+    <form ref='uploadForm'
+        id='uploadForm'
+        action='/upload'
         method='POST' 
         encType="multipart/form-data">
             <input type="file" name="files" multiple/>
             <input type='submit' value='Upload!' />
     </form>	
+    <button id="delete-media">Delete Media</button>
 
 	<div id="media-library" class="clearfix">
-		{{#videos}}
-			<div class="media video" data-id="" data-filepath="{{filepath}}" data-duration="{{metadata.format.duration}}">
+		{{#medias}}
+			<div class="media" data-id="{{_id}}" data-filepath="{{filepath}}" data-duration="{{metadata.format.duration}}" data-hasvideo={{hasvideo}} data-hasaudio={{hasaudio}} data-type={{type}}>
 				<img src="{{thumbnail}}" draggable="false">
 				<h4 class="media-name">{{filename}}</h4>
 			</div>
-		{{/videos}}
+		{{/medias}}
 	</div>
 </div>
 
 <div id="preview-area" class="ui-area">
-	<div class="preview-video" id="preview-current-area">
+	<div class="preview-video" id="preview-current-area" style="max-height: 80%; overflow: auto; ">
 		
 		<div class="preview-video-holder">
 			<div class="preview-video-handle">
@@ -44,97 +45,89 @@
 			</div>
 		</div>
 		
-		<button disabled="true" id="preview-current-play">Play</button>
-		<button disabled="true" id="preview-current-pause">Pause</button>
-		<button disabled="true" id="preview-current-stop">Stop</button>
-		<button disabled="true" class="preview-current-zoom-button" data-amount="0.1" id="preview-current-zoom-in">+</button>
-		<button disabled="true" class="preview-current-zoom-button" data-amount="-0.1" id="preview-current-zoom-out">-</button>
-		<button id="preview-current-selection">Select Region</button>
-		<button id="preview-current-remove-selections">Clear Selection</button>
-		
-		<div class="timeline" data-disabled="true" data-zoom="1" data-markerdensity="0.5" data-duration="12" data-layerwidth="100" data-endtime="12">
-			<div class="layer"></div>
+		<div style="padding: 10px;border: 1px solid black;margin: 10px;">
+			<button class="preview-control-button" id="preview-current-play">Play</button>
+			<button class="preview-control-button" id="preview-current-pause">Pause</button>
+			<button class="preview-control-button" id="preview-current-stop">Stop</button>
+			<button class="preview-control-button preview-current-zoom-button" data-amount="0.1" id="preview-current-zoom-in">+</button>
+			<button class="preview-control-button preview-current-zoom-button" data-amount="-0.1" id="preview-current-zoom-out">-</button>
 		</div>
-		
-		<div style="padding: 10px;border: 1px solid black;margin: 10px; display: none">
-			Done effects:
+
+		<div style="padding: 10px;border: 1px solid black;margin: 10px;">
+			<button id="preview-current-selection">Select Region</button>
+			<button id="preview-current-remove-selections">Clear Selection</button>
 			<div>
 				<button id="remove-selected">Remove Selected</button>
 				<button id="remove-unselected">Crop</button>
 				<button id="copy-media">Copy Media</button>
 			</div>
+		</div>
 
-			<div>
-				<input type="text" id="contrast-value" value="1"/>
-				<button class="set-eq-filter" data-filter="contrast" id="set-contrast">contrast</button>
-				-2.0 to 2.0
-			</div>
-			<div>
-				<input type="text" id="brightness-value" value="0"/>
-				<button class="set-eq-filter" data-filter="brightness" id="set-brightness">Brightness</button>
-				-1.0 to 1.0
-			</div>
-			<div>
-				<input type="text" id="saturation-value" value="1" />
-				<button class="set-eq-filter" data-filter="saturation" id="set-saturation">saturation</button>
-				0.0 to 3.0
-			</div>
-			<div>
-				<input type="text" id="gamma-value" value="1" />
-				<button class="set-eq-filter" data-filter="gamma" id="set-gamma">gamma</button>
-				0.1 to 10.0
-			</div>
-			<div>
-				<input type="text" id="gamma_r-value" value="1" />
-				<button class="set-eq-filter" data-filter="gamma_r" id="set-gamma_r">gamma_r</button>
-				0.1 to 10.0
-			</div>
-			<div>
-				<input type="text" id="gamma_g-value" value="1" />
-				<button class="set-eq-filter" data-filter="gamma_g" id="set-gamma_g">gamma_g</button>
-				0.1 to 10.0
-			</div>
-			<div>
-				<input type="text" id="gamma_b-value" value="1" />
-				<button class="set-eq-filter" data-filter="gamma_b" id="set-gamma_b">gamma_b</button>
-				0.1 to 10.0
-			</div>
-			<div>
-				<input type="checkbox" id="reverse-checkbox">
-				<button id="reverse">Reverse</button>
-			</div>
+		<div class="timeline" data-data-zoom="1" data-markerdensity="0.5" data-duration="12" data-layerwidth="100" data-endtime="12">
+			<div class="layer"></div>
+		</div>
+		
+		<div style="padding: 10px;border: 1px solid black;margin: 10px;">
+
 			<div>
 				<button id="apply-overlay-position">apply-overlay-position</button>
 				<button id="reset-overlay-position">reset-overlay-position</button>
+			</div>
+
+			<button id="apply-fitlers">Apply Filters</button>
+			<div>
+				Contrast <input class="eq-filter" type="text" id="contrast" value="1"/>
+				-2.0 to 2.0
+			</div>
+			<div>
+				Brightness <input class="eq-filter" type="text" id="brightness" value="0"/>
+				-1.0 to 1.0
+			</div>
+			<div>
+				Saturation <input class="eq-filter" type="text" id="saturation" value="1" />
+				0.0 to 3.0
+			</div>
+			<div>
+				Gamma <input class="eq-filter" type="text" id="gamma" value="1" />
+				0.1 to 10.0
+			</div>
+			<div>
+				Gamma Red <input class="eq-filter" type="text" id="gamma_r" value="1" />
+				0.1 to 10.0
+			</div>
+			<div>
+				Gamma Green <input class="eq-filter" type="text" id="gamma_g" value="1" />
+				0.1 to 10.0
+			</div>
+			<div>
+				Gamma Blue <input class="eq-filter" type="text" id="gamma_b" value="1" />
+				0.1 to 10.0
+			</div>
+			<div>
+				Reverse: <input type="checkbox" id="reverse-checkbox">
 			</div>
 			
 			<div>
 				Text: <textarea id="media-text"></textarea><br>
 				Size: <input id="media-text-size"><br>
-				Color: <input id="media-text-color"><br>
+				Color: <input type="color" id="media-text-color"><br>
 				Box: <input id="media-text-box"><br>
-				BoxColor: <input id="media-text-boxcolor"><br>
+				BoxColor: <input type="color" id="media-text-boxcolor"><br>
 				Top: <input id="media-text-top"><br>
 				Left: <input id="media-text-left"><br>
-
-				<button id="apply-text">Apply</button>
 			</div>
 
 		</div>
 		<div style="padding: 10px;border: 1px solid black;margin: 10px">
-			WIP effects: 
 			<div>
-				Custom Media<br>
+				For Blank Media<br>
 				Background: <input type="color" id="media-background-color">
 				<button id="set-media-background-color">Set Background Color</button>
 			</div>
-
-			
 		</div>
-		<div style="padding: 10px;border: 1px solid black;margin: 10px">
-			TODO effects:
 
-			<button>Circle</button>
+		<div style="padding: 10px;border: 1px solid black;margin: 10px">
+			Volume <input value="1" id="volume"> 0 - 2
 		</div>
 	</div>
 	<div class="preview-video">
