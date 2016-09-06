@@ -28,21 +28,7 @@ router.get('/', function(req, res) {
 				medias[i].thumbnail = medias[i].filepath.replace('public', '');
 			}
 
-			if (!fs.existsSync(medias[i].filepath)){ 
-
-				// This causes a bug on upload and refresh!
-				// (function(id){
-				// 	medias[i].remove( function (err) {
-				// 		if (err) {
-				// 			console.log(err);
-				// 		}
-				// 		else {
-				// 			console.log("Media was not found and was deleted from db: " + id);
-				// 		}
-				// 	});
-				// })(medias[i]._id);
-			}
-			else {
+			if ( fs.existsSync(medias[i].filepath) ){ 
 				medias[i].filepath = medias[i].filepath.replace( 'public/', '' );
 				visible_medias.push(medias[i]);
 			}
@@ -56,8 +42,35 @@ router.get('/', function(req, res) {
 });
 
 router.post('/editor', function(req, res) {
-	var data = editor.render(req.body).save(path.join(__dirname, '../public/medias', '/test-mest-2.mp4'));
-	res.send(data);
+	if (req.user) {
+		if ( !req.body.render_options || !req.body.render_options.format ) {
+			var format = 'webm';
+		}
+		else {
+			var format = req.body.render_options.format;
+		}
+	  	
+	  	var filename = "";
+	    var possible_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+	    for( var i=0; i < 10; i++ ) {
+	        filename += possible_chars.charAt(Math.floor(Math.random() * possible_chars.length));
+	    }
+
+		var filepath = path.join('media/' + req.user._id, '/' + filename + '.' + format);
+
+		var data = editor.render(req.session.editor_state, req.body.render_options).on('progress', function(progress) {
+			req.app.io.emit('render-progress', progress);
+		})
+		.on('end', function() {
+			req.app.io.emit('render-complete', filepath);	
+		})
+		.save( path.join(__dirname, '../public/media/' + req.user._id, '/' + filename + '.' + format) );
+		res.send("1");
+	}
+	else {
+		res.send("0");
+	}
 });
 
 router.get('/login', function(req, res){
@@ -138,7 +151,6 @@ router.post('/upload', function(req, res) {
 			var path = file.file;
 
 			var legit_video_mimes = [
-				'video/x-flv',				// .flv
 				'video/mp4',				// .mp4
 				'video/quicktime',			// .mov
 				'video/x-msvideo',			// .avi
@@ -210,7 +222,7 @@ router.post('/upload', function(req, res) {
 						    fs.mkdirSync(folder);
 						}
 
-						var new_filepath = folder + newMedia.filepath.replace(/^.*[\\\/]/, '').replace(' ', '-');
+						var new_filepath = folder + newMedia.filepath.replace(/^.*[\\\/]/, '').replace(/\s/g, '-');
 
 						Media.update({ _id: newMedia.id }, {
 							$set: { 
@@ -290,12 +302,17 @@ router.post('/upload', function(req, res) {
 		})(file);
 	}
 	res.redirect('/');
-});
+});	
 
 router.get('/preview', function(req, res) {
 	res.contentType('webm');
 	var data = req.session.editor_state;
-	if( data ){
+	if( data && req.user ){
+		if( req.app.ffmpeg_commands[req.user._id] ) {
+			req.app.ffmpeg_commands[req.user._id].kill();
+			req.app.ffmpeg_commands[req.user._id] = false;
+		}
+
 		var ffmpeg_preview = editor.render(data).format('webm');
 
 		var start = req.param("preview_start");
@@ -303,7 +320,8 @@ router.get('/preview', function(req, res) {
 			ffmpeg_preview.seekOutput(start);
 		}
 
-		req.app.io.ffmpeg_preview = ffmpeg_preview;
+		req.app.ffmpeg_commands[req.user._id] = ffmpeg_preview;
+
 		return ffmpeg_preview.pipe(res, {end:true});    
 	}
 	else {

@@ -7,15 +7,28 @@
 		create_selection: false,
 		preview_video_interval: "",	
 		aspect_ratio : { 
-			width: 2,
-			height: 1
+			width: 16,
+			height: 9
 		},
+		progressbar : "",
+		duration : 0,
 
 		init: function() {
 
 			this.socket = io();
 			this.socket.on('refresh', function() {
 				window.location.reload();
+			});
+
+			this.socket.on('render-complete', function( data ) {
+				window.open(data,'_blank');
+			});
+
+			this.socket.on('render-progress', function( data ) {
+				// Convert hh:mm:ss to seconds
+				var timemark_split = data.timemark.split(':');
+				var seconds = (+timemark_split[0]) * 60 * 60 + (+timemark_split[1]) * 60 + (+timemark_split[2]); 
+				$.editor.progressbar.progressbar( 'value', seconds * 100 / $.editor.duration  );
 			});
 
 			this.timeline = new $.timeline( $('#timeline'), {
@@ -239,11 +252,11 @@
 					method: "post",
 					dataType: "json"
 				}).done(function( data ) {
-					console.log(data);
 					if (data == 1) {
 						$('.media[data-id=' + id + '], .layer-media[data-id=' + id + ']').remove();
 					}
 				});
+				return false;
 			});
 
 			$( ".media" )
@@ -260,7 +273,8 @@
 						offset : 0,
 						hasvideo : $this.attr('data-hasvideo'),
 						hasaudio : $this.attr('data-hasaudio'),
-						type : $this.attr('data-type')
+						type : $this.attr('data-type'),
+						filters : $this.attr('data-filters'),
 					}
 
 					return $.editor.createLayerMedia( args );
@@ -280,16 +294,43 @@
 				$.editor.timeline.addLayer();
 			});	
 
-			$('#render').on('click', function(){
-				$.editor.renderVideo();
+			$('#open-render-dialog').on('click', function(){
+				$( "#render-dialog" ).dialog({title: "Опции за рендиране"});
 			});
 
-			$('#play').on('click', function(){
-				$.editor.renderVideo();
-			});	
+			$('#render').on('click', function(){
+				$( "#render-dialog" ).dialog();
+				var options = $.editor.renderVideo( {
+					quality : $('#render-quality').val(),
+					format : $('#render-format').val(),
+					resolution : $('#render-resolution').val()
+				} );
+				$.editor.updateState( options );
+				document.getElementById('preview-current').src = "";
+				document.getElementById('preview-final').src = "";
+
+				return false;
+			});
+
+			$('.slider').each( function(i, e) {
+				$e = $(e);
+				$e.slider({
+					min: Number($e.attr('data-min')),
+					max: Number($e.attr('data-max')),
+					step: 0.1,
+					value: $e.siblings('.slider-input').val(),
+					disabled: true,
+					slide: function( event, ui ) {
+						$(this).siblings('input').val( ui.value  );
+					}
+				})
+			})
+
+			this.progressbar = $( "#render-progress" ).progressbar();
 
 			this.startHotKeyListener();
 			$.editor.updateInterfaceElements();
+
 		},
 
 		createLayerMedia : function ( args ) {
@@ -419,7 +460,6 @@
 
 				var filters = $e.attr('data-filters');
 				if (filters && filters != 'undefined') {
-					console.log(filters);
 					filters = JSON.parse(filters);
 				}
 
@@ -451,11 +491,13 @@
 					width = overlay_filters.width || 100;
 					height = overlay_filters.height || 100;
 				}
+				var duration = Number($e.attr('data-duration'));
+				var end = start + duration;
 
 				timeline_data.push({
 					'file': $e.attr('data-filepath'),
 					'start': start,
-					'end': start + Number($e.attr('data-duration')),
+					'end': end,
 					'offset': Number($e.attr('data-offset')),
 					'timeline_layer': 0,
 					'volume': 1,
@@ -467,15 +509,23 @@
 					'hasaudio': has_audio,
 					'filters' : filters
 				});
+
+				if ( end > duration ) {
+					duration = end;
+				}
 			}
+
+			$.editor.duration = duration;
 
 			return {'clips' : timeline_data};
 		},
 
-		renderVideo: function () {
+		renderVideo: function ( render_options ) {
 			$.ajax({
 				url: "/editor",
-				data: this.getEditorState(),
+				data: {
+					render_options: render_options
+				},
 				method: "post",
 				dataType: "json"
 			}).done(function( data ) {
@@ -485,13 +535,11 @@
 
 		updateState: function( single_media ) {
 			var state = this.getEditorState( single_media );
-			console.log(state);
 			this.socket.emit('update_editor_state', state);
-
 			if ( ! single_media ) {
 				var video = document.getElementById('preview-final');
 				video.pause();
-				preview_start = document.getElementById('preview-final').timelineTime;
+				preview_start = video.timelineTime;
 				video.src = "/preview";
 				if ( preview_start ) {
 					video.src += "?preview_start=" + preview_start;
@@ -618,7 +666,7 @@
 						fontcolor_expr : $('#media-text-color').val(),
 						y : $('#media-text-top').val(),
 						x : $('#media-text-left').val(),
-						box : $('#media-text-box').val(),
+						box : $('#media-text-box').is(':checked'),
 						boxcolor : $('#media-text-boxcolor').val()
 					});
 
@@ -630,11 +678,13 @@
 						$.editor.setFilter( $selected_media, filter, value );				
 					}
 
-					value = $('#reverse-checkbox').is(':checked');
-					$.editor.setFilter( $selected_media, 'reverse', value );
 				}
 
-				if ( media_type == 'audio' ) {
+				if ( media_type == 'audio' || media_type == 'video' ) {
+					
+					reverse_value = $('#reverse-checkbox').is(':checked');
+					$.editor.setFilter( $selected_media, 'reverse', reverse_value );
+
 					$.editor.setFilter( $selected_media, 'volume', $('#volume').val() );	
 				}
 
@@ -674,7 +724,12 @@
 			var filters = $media.attr('data-filters');
 			if ( filters ) {
 				filters = JSON.parse(filters);
-				return filters[filter];
+				if ( filter ) {
+					return filters[filter];
+				}
+				else {
+					return filters;
+				}
 			}
 
 			return {};
@@ -695,6 +750,10 @@
 
 				var overlay_filters = $.editor.getFilter( $media, 'overlay' );
 				
+				if ( !overlay_filters ) {
+					overlay_filters = {};
+				}
+
 				overlay_filters.width = width * 100 / total_width;
 				overlay_filters.height = height * 100 / total_height;
 				overlay_filters.left = left * 100 / total_width;
@@ -712,8 +771,9 @@
 					'left': 0,
 					'top': 0
 				});
-			}				
 
+				$.editor.updateState( $media );
+			}				
 		},
 
 		resetOverlayPosition : function ( $media ) {
@@ -758,9 +818,11 @@
 			var media_type = $selected_media.attr('data-type');
 			$('#delete-media').attr('disabled', true);
 
-			var $preview_area = $('#preview-current-area');
+			var $preview_area = $('#preview-current-area, .filters');
 			var $timeline = $preview_area.find('.timeline');
-			
+
+			$('.slider').slider('disable');
+
 			if ( $selected_media.length ) {
 
 				$timeline.attr('data-disabled', false);
@@ -783,28 +845,57 @@
 				// Media element from the timeline is selected
 				if ( $selected_media.hasClass('layer-media') ) {
 
-					$('#volume').attr('disabled', false);
+					$('#preview-current-selection, #preview-current-remove-selections, #remove-selected, #remove-unselected, #copy-media').removeAttr('disabled');
+
+					if ( media_type == 'audio' ) {
+						var filters_holders = $('.audio-filters');
+					}
+					else if ( media_type == 'blank' ) {
+						var filters_holders = $('.blank-filters');
+					}
+					else if ( media_type == 'video' ) {
+						var filters_holders = $('.video-filters, .audio-filters');
+						$('#apply-overlay-position, #reset-overlay-position').removeAttr('disabled');
+					}
+
+					var filters = $.editor.getFilter( $selected_media );
+
+					for ( var filter in filters ) {
+						if ( filters.hasOwnProperty(filter) ) {
+							if (filter == 'text') {
+								$('#media-text').val(filters[filter].text);
+								$('#media-text-color').val(filters[filter].fontcolor_expr);
+								$('#media-text-box').prop('checked', filters[filter].box);
+								$('#media-text-boxcolor').val(filters[filter].boxcolor);
+								$('#media-text-size').val(filters[filter].fontsize).siblings('.slider').slider( 'option', 'value', filters[filter].fontsize );
+								$('#media-text-left').val(filters[filter].x);
+								$('#media-text-top').val(filters[filter].y);
+							}
+							else {
+								var input = $('#' + filter).val( filters[filter] );
+								var slider = input.siblings('.slider');
+								if( slider.length ) {
+									slider.slider( 'option', 'value', filters[filter] );
+								}
+							}
+						}
+					}
+					$preview_area.find('.preview-control-button').attr('disabled', false);
+					$('#apply-fitlers').attr('disabled', false);
+					filters_holders.find('.slider').slider('enable');
+					filters_holders.find('button, input, textarea').attr('disabled', false);
 
 					$('#preview-current').attr('src', $selected_media.attr('data-filepath'));
+					$('#preview-final').attr('src', '');
 
-					if ( media_type != 'audio' ) {
-						$preview_area.find('button, input, textarea').attr('disabled', false);
-					}
-					else {
-						$preview_area.find('.preview-control-button').attr('disabled', false);
-						$('#apply-fitlers').attr('disabled', false);
-					}
 					var is_blank = ( media_type == 'blank' );
-
-					if ( !is_blank ) {
-						document.getElementById('preview-current').currentTime = $selected_media.attr('data-offset') || 0;
-					}
 
 					if ( $selected_media.attr('data-filters') || is_blank ) {
 						$.editor.preview_timeline.setTimelineMode ( true, document.getElementById('preview-current') );
 					}
 					else {
 						$.editor.preview_timeline.setTimelineMode ( false, document.getElementById('preview-current') );
+						document.getElementById('preview-current').currentTime = $selected_media.attr('data-offset') || 0;
 					}
 				}
 			}

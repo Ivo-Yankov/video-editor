@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Video Editor</title>
+	<title>Видео Редактор</title>
 	<link rel="stylesheet" type="text/css" href="/stylesheets/jquery-ui.min.css">
 	<link rel="stylesheet" type="text/css" href="/stylesheets/jquery-ui.theme.min.css">
+	<link rel="stylesheet" type="text/css" href="/stylesheets/bootstrap.css">
 	<link rel="stylesheet" type="text/css" href="/stylesheets/style.css">
 	<script type="text/javascript" src="javascripts/jquery-3.1.0.min.js"></script>
 	<script type="text/javascript" src="javascripts/jquery-ui.min.js"></script>
@@ -21,14 +22,14 @@
         action='/upload'
         method='POST' 
         encType="multipart/form-data">
-            <input type="file" name="files" multiple/>
-            <input type='submit' value='Upload!' />
+            <input type="file" name="files" multiple style="margin-bottom:10px;"/>
+            <input type='submit' value='Качи' /> <button id="delete-media"><span class="glyphicon glyphicon-trash"></span></button>
     </form>	
-    <button id="delete-media">Delete Media</button>
+    
 
 	<div id="media-library" class="clearfix">
 		{{#medias}}
-			<div class="media" data-id="{{_id}}" data-filepath="{{filepath}}" data-duration="{{metadata.format.duration}}" data-hasvideo={{hasvideo}} data-hasaudio={{hasaudio}} data-type={{type}}>
+			<div class="media" data-id="{{_id}}" data-filepath="{{filepath}}" data-duration="{{metadata.format.duration}}" data-hasvideo={{hasvideo}} data-hasaudio={{hasaudio}} data-type={{type}} data-filters='{"text":{"text":"","fontsize":"16","fontcolor_expr":"#000000","y":"","x":"","box":false,"boxcolor":"#000000"},"contrast":"1","brightness":"0","saturation":"1","gamma":"1","gamma_r":"1","gamma_g":"1","gamma_b":"1","reverse":false,"volume":"1"}'>
 				<img src="{{thumbnail}}" draggable="false">
 				<h4 class="media-name">{{filename}}</h4>
 			</div>
@@ -37,122 +38,149 @@
 </div>
 
 <div id="preview-area" class="ui-area">
-	<div class="preview-video" id="preview-current-area" style="max-height: 80%; overflow: auto; ">
-		
-		<div class="preview-video-holder">
-			<div class="preview-video-handle">
-				<video id="preview-current" src=""></video>
+	<div class="row">
+		<div class="preview-video" id="preview-current-area">
+			<h4>Избрано видео</h4>
+
+			<div class="preview-video-holder">
+				<div class="preview-video-handle">
+					<video id="preview-current" src=""></video>
+				</div>
 			</div>
-		</div>
-		
-		<div style="padding: 10px;border: 1px solid black;margin: 10px;">
-			<button class="preview-control-button" id="preview-current-play">Play</button>
-			<button class="preview-control-button" id="preview-current-pause">Pause</button>
-			<button class="preview-control-button" id="preview-current-stop">Stop</button>
-			<button class="preview-control-button preview-current-zoom-button" data-amount="0.1" id="preview-current-zoom-in">+</button>
-			<button class="preview-control-button preview-current-zoom-button" data-amount="-0.1" id="preview-current-zoom-out">-</button>
-		</div>
-
-		<div style="padding: 10px;border: 1px solid black;margin: 10px;">
-			<button id="preview-current-selection">Select Region</button>
-			<button id="preview-current-remove-selections">Clear Selection</button>
-			<div>
-				<button id="remove-selected">Remove Selected</button>
-				<button id="remove-unselected">Crop</button>
-				<button id="copy-media">Copy Media</button>
-			</div>
-		</div>
-
-		<div class="timeline" data-data-zoom="1" data-markerdensity="0.5" data-duration="12" data-layerwidth="100" data-endtime="12">
-			<div class="layer"></div>
-		</div>
-		
-		<div style="padding: 10px;border: 1px solid black;margin: 10px;">
-
-			<div>
-				<button id="apply-overlay-position">apply-overlay-position</button>
-				<button id="reset-overlay-position">reset-overlay-position</button>
+			
+			<div class="btn-group" role="group">
+				<button class="btn btn-default preview-control-button" id="preview-current-play"><span class="glyphicon glyphicon-play"></span></button>
+				<button class="btn btn-default preview-control-button" id="preview-current-pause"><span class="glyphicon glyphicon-pause"></span></button>
+				<button class="btn btn-default preview-control-button" id="preview-current-stop"><span class="glyphicon glyphicon-stop"></span></button>
 			</div>
 
-			<button id="apply-fitlers">Apply Filters</button>
-			<div>
-				Contrast <input class="eq-filter" type="text" id="contrast" value="1"/>
-				-2.0 to 2.0
+			<div class="btn-group" role="group">
+				<button class="btn btn-default preview-control-button preview-current-zoom-button" data-amount="0.1" id="preview-current-zoom-in"><span class="glyphicon glyphicon-zoom-in"></span></button>
+				<button class="btn btn-default preview-control-button preview-current-zoom-button" data-amount="-0.1" id="preview-current-zoom-out"><span class="glyphicon glyphicon-zoom-out"></span></button>
 			</div>
-			<div>
-				Brightness <input class="eq-filter" type="text" id="brightness" value="0"/>
-				-1.0 to 1.0
+
+			<div class="timeline" data-data-zoom="1" data-markerdensity="0.5" data-duration="12" data-layerwidth="100" data-endtime="12"><div class="layer"></div></div>
+
+			<div class="btn-group" role="group">
+				<button class="btn btn-default" id="preview-current-selection">Избери отрязък</button>
+				<button class="btn btn-default" id="preview-current-remove-selections">Отказ на селекция</button>
 			</div>
-			<div>
-				Saturation <input class="eq-filter" type="text" id="saturation" value="1" />
-				0.0 to 3.0
+		</div>
+		<div class="preview-video">
+			<h4>Преглед на финалното видео</h4>
+
+			<div class="preview-video-holder">
+				<video id="preview-final" src=""></video>
 			</div>
-			<div>
-				Gamma <input class="eq-filter" type="text" id="gamma" value="1" />
-				0.1 to 10.0
+			<div class="btn-group" role="group">
+				<button class="btn btn-default preview-control-button" id="preview-final-play"><span class="glyphicon glyphicon-play"></span></button>
+				<button class="btn btn-default preview-control-button" id="preview-final-pause"><span class="glyphicon glyphicon-pause"></span></button>
+				<button class="btn btn-default preview-control-button" id="preview-final-stop"><span class="glyphicon glyphicon-stop"></span></button>
 			</div>
-			<div>
-				Gamma Red <input class="eq-filter" type="text" id="gamma_r" value="1" />
-				0.1 to 10.0
-			</div>
-			<div>
-				Gamma Green <input class="eq-filter" type="text" id="gamma_g" value="1" />
-				0.1 to 10.0
-			</div>
-			<div>
-				Gamma Blue <input class="eq-filter" type="text" id="gamma_b" value="1" />
-				0.1 to 10.0
-			</div>
-			<div>
-				Reverse: <input type="checkbox" id="reverse-checkbox">
+
+		</div>
+	</div>
+
+	<div class="row filters">
+
+		<div class="col-xs-6">
+			<div style="margin: 20px 0 10px;">Действия върху избрания отрязък:</div>
+
+			<div class="btn-group" role="group">
+				<button class="btn btn-default" id="remove-selected">Премахване</button>
+				<button class="btn btn-default" id="remove-unselected">Изрязване</button>
+				<button class="btn btn-default" id="copy-media">Копиране</button>
 			</div>
 			
 			<div>
-				Text: <textarea id="media-text"></textarea><br>
-				Size: <input id="media-text-size"><br>
-				Color: <input type="color" id="media-text-color"><br>
-				Box: <input id="media-text-box"><br>
-				BoxColor: <input type="color" id="media-text-boxcolor"><br>
-				Top: <input id="media-text-top"><br>
-				Left: <input id="media-text-left"><br>
+
+				Позиция на рамката:
+				<div class="btn-group" role="group">
+					<button class="btn btn-default" id="apply-overlay-position"><span class="glyphicon glyphicon-ok-sign"></span></button>
+					<button class="btn btn-default" id="reset-overlay-position"><span class="glyphicon glyphicon-remove-sign"></span></button>
+				</div>
 			</div>
 
-		</div>
-		<div style="padding: 10px;border: 1px solid black;margin: 10px">
 			<div>
-				For Blank Media<br>
-				Background: <input type="color" id="media-background-color">
-				<button id="set-media-background-color">Set Background Color</button>
+				<button class="btn btn-default" id="apply-fitlers">Запис на филтрите</button>
 			</div>
+		
 		</div>
+		<div class="col-xs-6 filters-col">
+			<div class="audio-filters">
+				<div>
+					Сила на звука <input type="text" class="slider-input" readonly value="1" id="volume">
+					<div id="volume-slider" class="slider" data-min="0" data-max="2"></div>
+				</div>
+			</div>
 
-		<div style="padding: 10px;border: 1px solid black;margin: 10px">
-			Volume <input value="1" id="volume"> 0 - 2
-		</div>
-	</div>
-	<div class="preview-video">
-		<div class="preview-video-holder">
-			<video id="preview-final" src=""></video>
+			<div class="video-filters">
+				<div>
+					Контраст <input class="slider-input eq-filter" type="text" readonly id="contrast" value="1"/>
+					<div class="slider" data-min="-2" data-max="2"></div>
+				</div>
+				<div>
+					Яркост
+					<input class="slider-input eq-filter"  type="text" readonly id="brightness" value="0"/>
+					<div class="slider" data-min="-1" data-max="1"></div>
+				</div>
+				<div>
+					Наситеност <input class="slider-input eq-filter" type="text" readonly id="saturation" value="1" />
+					<div class="slider" data-min="0" data-max="3"></div>
+				</div>
+				<div>
+					Гама <input class="slider-input eq-filter" type="text" readonly id="gamma" value="1" />
+					<div class="slider" data-min="0.1" data-max="10"></div>
+				</div>
+				<div>
+					Гама (червено) <input class="slider-input eq-filter" type="text" readonly id="gamma_r" value="1" />
+					<div class="slider" data-min="0.1" data-max="10"></div>
+				</div>
+				<div>
+					Гама (зелено) <input class="slider-input eq-filter" type="text" readonly id="gamma_g" value="1" />
+					<div class="slider" data-min="0.1" data-max="10"></div>
+				</div>
+				<div>
+					Гама (синьо) <input class="slider-input eq-filter" type="text" readonly id="gamma_b" value="1" />
+					<div class="slider" data-min="0.1" data-max="10"></div>
+				</div>
+				<div class="audio-filters">
+					обратно възпроизвеждане: <input type="checkbox" id="reverse-checkbox">
+				</div>
+				
+				<div class="blank-filters video-filters">
+					Текст: <textarea class="form-control" id="media-text"></textarea><br> 
+					<div>
+						Размер: <input class="slider-input" type="text" readonly id="media-text-size" value="16" />
+						<div class="slider" data-min="12" data-max="50"></div>
+					</div>
+					Цвят: <input class="form-control" type="color" id="media-text-color"><br>
+					Фон на текста: <input type="checkbox" id="media-text-box"><br>
+					Цвят на фона: <input class="form-control" type="color" id="media-text-boxcolor"><br>
+					Y координати (в пиксели): <input class="form-control" id="media-text-top"><br>
+					X координати (в пиксели): <input class="form-control" id="media-text-left"><br>
+				</div>
+			</div>
+			<div class="blank-filters">
+				Цвят на фон:
+				<input class="form-control" type="color" id="media-background-color">			
+			</div>
 		</div>
 	</div>
 </div>
 
 <div id="timeline-area" class="ui-area">
 	<div id="timeline-controls" class="ui-area">
-		Zoom:
-		<button id="zoom-plus" class="zoom-button" data-amount="0.1">+</button>
-		<button id="zoom-minus" class="zoom-button" data-amount="-0.1">-</button>
-
-		<button id="add-layer">Add Layer</button>		
-
-		<button id="render">RENDER</button>
-		<button id="play">Play</button>
-
-		<button id="preview-final-play">Play</button>
-		<button id="preview-final-pause">Pause</button>
-		<button id="preview-final-stop">Stop</button>
-		<button id="remove-media">Remove Media</button>
-		<button id="add-media">New Media</button>
+		<div class="btn-group" role="group">
+			<button id="zoom-plus" class="btn btn-default zoom-button" data-amount="0.1"><span class="glyphicon glyphicon-zoom-in"></span></button>
+			<button id="zoom-minus" class="btn btn-default zoom-button" data-amount="-0.1"><span class="glyphicon glyphicon-zoom-out"></span></button>
+		</div>
+		<br>
+		<button class="btn btn-default" id="add-layer">Добави слой</button>		
+		<button class="btn btn-default" id="remove-media">Премахни медия</button>
+		<button class="btn btn-default" id="add-media">Нова медия</button>
+		<br>
+		<button class="btn btn-primary" id="open-render-dialog">Рендиране</button>
 	</div>
 	<div class="ui-area timeline-holder">
 		<div id="timeline" class="timeline" data-zoom="1" data-markerdensity="1.5" data-duration="600" data-endtime="600" data-layerwidth="200">
@@ -160,3 +188,48 @@
 		</div>
 	</div>
 </div>
+
+<div id="render-dialog" title="Render">
+	<form id="render-options" name="render-options">
+	Формат: 
+	<select name="render-format" id="render-format">
+		<option value="mp4">mp4</option>
+		<option value="webm">webm</option>
+		<option value="m4v">m4v</option>
+		<option value="mpeg">mpeg</option>
+		<option value="mov">mov</option>
+		<option value="avi">avi</option>
+		<option value="wmv">wmv</option>
+	</select>
+
+	Резолюция: 
+	<select name="render-resolution" id="render-resolution">
+		<option value="320x180">320x180</option>
+		<option value="640x480">640x480</option>
+		<option value="800x600">800x600</option>
+		<option value="960x720">960x720</option>
+		<option value="1024x768">1024x768</option>
+		<option value="1280x960">1280x960</option>
+		<option value="1400x1050">1400x1050</option>
+		<option value="1440x1080">1440x1080</option>
+		<option value="1600x1200">1600x1200</option>
+		<option value="1856x1392">1856x1392</option>
+		<option value="1920x1080">1920x1080</option>
+		<option value="1920x1440">1920x1440</option>
+	</select>
+	
+	Качество на звука:
+	<select name="render-quality" id="render-quality">
+		<option value="low">Ниско (32 kHz)</option>
+		<option value="medium">Средно (48 kHz)</option>
+		<option value="high">Високо (96 kHz)</option>
+	</select>
+	<br>
+
+
+	<button class="btn btn-default" id="render">Започни Рендиране</button>
+	
+	<div id="render-progress"></div>
+
+	</form>
+</div> 

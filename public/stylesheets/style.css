@@ -30,6 +30,7 @@ body {
 #preview-area {
   height: 80%;
   float: left;
+  padding: 10px;
 }
 
 #media-area {
@@ -49,7 +50,6 @@ body {
 
 .preview-video {
   width: 48%;
-  height: 100%;
   float: left;
   margin-left: 1%;
 }
@@ -133,6 +133,11 @@ body {
   width: 300px;
   float: left;
   height: 100%;
+  padding: 10px;
+}
+
+#timeline-controls button{
+  margin-bottom: 10px;
 }
 
 .timeline {
@@ -304,4 +309,30 @@ body {
   border-left: 1px solid #3b71ea;
   border-right: 1px solid #3b71ea;
   opacity: 0.4;
+}
+
+#render-dialog {
+  display: none;
+}
+
+.filters {
+  margin: 10px;
+}
+
+.slider {
+  margin: 5px 0 15px;
+}
+
+.row.filters {
+  height: 200px;
+}
+
+.filters-col {
+  max-height: 100%;
+  overflow: auto;
+}
+
+#render-options select,
+#render-options button{
+  margin-bottom: 10px;
 }

@@ -80,17 +80,17 @@ app._router.stack.forEach(function(r){
   }
 })
 
-module.exports = app;
-  
+app.ffmpeg_commands = [];
+
 io.on('connection', function(socket){
   socket.on('update_editor_state', function(editor_state){
     socket.handshake.session.editor_state = editor_state;
     socket.handshake.session.save();
-
     var data = socket.handshake.session.editor_state;
     if( data ){
-      if( socket.ffmpeg_preview ) {
-        socket.ffmpeg_preview.kill();
+      if( app.ffmpeg_commands[socket.handshake.session.passport.user._id] ) {
+        app.ffmpeg_commands[socket.handshake.session.passport.user._id].kill();
+        app.ffmpeg_commands[socket.handshake.session.passport.user._id] = false;
       }
     }
     else {
@@ -100,6 +100,8 @@ io.on('connection', function(socket){
 
 });
 
-http.listen(3000, function(){
-  console.log('listening on *:3000');
+module.exports = app;
+
+http.listen(80, function(){
+  console.log('listening on *:80');
 });

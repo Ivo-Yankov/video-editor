@@ -16,13 +16,40 @@ module.exports = {
 	complex_filters : [],
 	input_index : 0,
 
-	render: function (data) {
+	render: function (data, options) {
+
+		if ( !options ) {
+			options = {};
+		}
+		if ( !options.quality ) {
+			options.quality = "low";
+		}
+		if ( !options.resolution ) {
+			options.resolution = "320x180";
+		}
+		if ( !options.format ) {
+			options.format = "webm";
+		}
+
+		var audio_samplerate;
+		switch ( options.quality ) {
+			case 'high' : 
+				audio_samplerate = "96000";
+				break;
+			case 'medium' : 
+				audio_samplerate = "48000";
+				break;
+			default: 
+				audio_samplerate = "32000";
+				break;
+		}
+
 		var clips = data.clips;
 
-		console.log(clips);
-		var resolution_width = "320";
-		var resolution_height = "180";
-		var resolution = resolution_width + "x" + resolution_height;
+		var resolution_arr = options.resolution.split('x');
+		var resolution_width = resolution_arr[0];
+		var resolution_height = resolution_arr[1];
+		var resolution = options.resolution;
 		var background = "black";
 		var uploads_folder = '/public/';
 
@@ -157,7 +184,7 @@ module.exports = {
  				audio_options.filters.push( 'asetpts=PTS+' + (clip.start - offset) + '/TB' );
 
 				audio_options.filters.push( 'atrim=start=' + clip.start + ':end=' + (clip.end + offset) );
-				audio_options.filters.push( 'aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo' );
+				audio_options.filters.push( 'aformat=sample_fmts=fltp:sample_rates=' + audio_samplerate + ':channel_layouts=stereo' );
 
 				if ( volume && volume !== 1 ) {
 					audio_options.filters.push( 'volume=' + volume );
@@ -251,7 +278,7 @@ module.exports = {
 
 				// Audio does not start at 0
 				if ( stream.options.start ) {
-					filter = 'aevalsrc=0:s=48000:d=' + stream.options.start + this.streamNameToString( this.streams.last_audio_name );
+					filter = 'aevalsrc=0:s=' + audio_samplerate + ':d=' + stream.options.start + this.streamNameToString( this.streams.last_audio_name );
 					this.addFilter( filter );
 
 					concat_filter_start = this.streamNameToString( this.streams.last_audio_name );
@@ -280,7 +307,7 @@ module.exports = {
 				var concat_filter_end = "";
 				if ( stream.options.end < duration ) {
 					var end_silence_duration = duration - stream.options.end;
-					filter = 'aevalsrc=0:s=48000:d=' + end_silence_duration + this.streamNameToString( this.streams.last_audio_name );
+					filter = 'aevalsrc=0:s=' + audio_samplerate + ':d=' + end_silence_duration + this.streamNameToString( this.streams.last_audio_name );
 					this.addFilter( filter );
 
 					concat_filter_end = this.streamNameToString( this.streams.last_audio_name );
@@ -320,7 +347,7 @@ module.exports = {
 		if (there_is_audio) {
 			this.ffmpeg.addOption('-map', this.streamNameToString( this.streams.last_audio_name ) );
 			this.ffmpeg.addOption('-ac', 2 );
-			this.ffmpeg.addOption('-b:a', '48k' );
+			this.ffmpeg.addOption('-b:a', (audio_samplerate / 1000) + 'k' );
 		}
 		this.ffmpeg.addOption('-t', duration );
 
