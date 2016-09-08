@@ -22,8 +22,8 @@
         action='/upload'
         method='POST' 
         encType="multipart/form-data">
-            <input type="file" name="files" multiple style="margin-bottom:10px;"/>
-            <input type='submit' value='Качи' /> <button id="delete-media"><span class="glyphicon glyphicon-trash"></span></button>
+            <input id="file-upload" type="file" name="files" multiple style="margin-bottom:10px;"/>
+            <input type='submit' id="file-upload-btn" value='Качи' /> <button id="delete-media"><span class="glyphicon glyphicon-trash"></span></button>
     </form>	
     
 
@@ -201,7 +201,7 @@
 		<option value="avi">avi</option>
 		<option value="wmv">wmv</option>
 	</select>
-
+<br>
 	Резолюция: 
 	<select name="render-resolution" id="render-resolution">
 		<option value="320x180">320x180</option>
@@ -217,7 +217,7 @@
 		<option value="1920x1080">1920x1080</option>
 		<option value="1920x1440">1920x1440</option>
 	</select>
-	
+<br>
 	Качество на звука:
 	<select name="render-quality" id="render-quality">
 		<option value="low">Ниско (32 kHz)</option>

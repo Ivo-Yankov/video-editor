@@ -160,6 +160,9 @@
 			});
 
 			$('#preview-final-stop').on('click', function() {
+				$('.selected').removeClass('selected');
+				$.editor.updateInterfaceElements();
+
 				var video = document.getElementById('preview-final');
 				video.timelineTime = 0;
 				video.prevTime = 0;
@@ -299,17 +302,26 @@
 			});
 
 			$('#render').on('click', function(){
-				$( "#render-dialog" ).dialog();
-				var options = $.editor.renderVideo( {
-					quality : $('#render-quality').val(),
-					format : $('#render-format').val(),
-					resolution : $('#render-resolution').val()
-				} );
-				$.editor.updateState( options );
+				$('.selected').removeClass('selected');
+				$.editor.updateState();
 				document.getElementById('preview-current').src = "";
 				document.getElementById('preview-final').src = "";
+				
+				setTimeout( function() {
+					var options = $.editor.renderVideo( {
+						quality : $('#render-quality').val(),
+						format : $('#render-format').val(),
+						resolution : $('#render-resolution').val()
+					} );
+				}, 500);
 
 				return false;
+			});
+
+			$('#file-upload-btn').on('click', function(){
+				if ( !$('#file-upload').val() ) {
+					return false;
+				}
 			});
 
 			$('.slider').each( function(i, e) {
@@ -760,10 +772,7 @@
 				overlay_filters.top = top * 100 / total_height;
 
 				$.editor.setFilter( $media, 'overlay', overlay_filters );
-				$.editor.updateState ( $media );
-
 				$.editor.preview_timeline.setTimelineMode( true, document.getElementById('preview-current') );
-
 
 				$handle.css({
 					'width': '100%',
@@ -885,8 +894,8 @@
 					filters_holders.find('.slider').slider('enable');
 					filters_holders.find('button, input, textarea').attr('disabled', false);
 
-					$('#preview-current').attr('src', $selected_media.attr('data-filepath'));
-					$('#preview-final').attr('src', '');
+					// $('#preview-current').attr('src', $selected_media.attr('data-filepath'));
+					// $('#preview-final').attr('src', '');
 
 					var is_blank = ( media_type == 'blank' );
 
@@ -896,7 +905,10 @@
 					else {
 						$.editor.preview_timeline.setTimelineMode ( false, document.getElementById('preview-current') );
 						document.getElementById('preview-current').currentTime = $selected_media.attr('data-offset') || 0;
+						document.getElementById('preview-current').src = $selected_media.attr('filepath');
 					}
+
+					$.editor.updateState( $selected_media );
 				}
 			}
 
@@ -1002,6 +1014,7 @@
 				layers.droppable({
 					accept: ".layer-media, .media",
 					drop: function( event, ui ) {
+						$('.selected').removeClass('selected');
 						$this = $(this);
 						var left_px = ui.position.left;				
 						var e;
